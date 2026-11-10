@@ -49,4 +49,12 @@ class ProfileSkillAgent:
     Do not invent information about the student.
     Clearly distinguish provided information from your recommendations.
     """
+    
+    def analyze_profile(self, student_profile):
+        messages=[
+            SystemMessage(content=self.system_prompt),
+            HumanMessage(content=student_profile)
+        ]
+        response=self.model.invoke(messages)
+        return response.content
         
