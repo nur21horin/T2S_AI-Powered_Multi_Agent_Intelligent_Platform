@@ -58,3 +58,37 @@ class ProfileSkillAgent:
         response=self.model.invoke(messages)
         return response.content
         
+#Standalone testing
+
+if __name__ == "__main__":
+    agent = ProfileSkillAgent()
+
+student = """
+Name: Student A
+
+Department: Software Engineering
+Major: Data Science
+CGPA: 3.60
+
+Skills:
+- Python
+- Machine Learning
+- Pandas
+- NumPy
+- SQL
+- React
+- JavaScript
+
+Career Goal:
+Become a Data Scientist.
+
+Current Challenges:
+- Deep Learning
+- Statistics
+- MLOps
+"""
+
+result = agent.analyze_profile(student)
+
+print("\n========== PROFILE & SKILL ANALYSIS ==========\n")
+print(result)
