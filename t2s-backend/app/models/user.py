@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, CheckConstraint, Enum as SAEnum, String, Uuid
+from sqlalchemy import Boolean, CheckConstraint, Enum as SAEnum, Integer, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import UserRole
@@ -35,6 +35,9 @@ class User(TimestampMixin, Base):
     )
     is_verified: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
+    )
+    auth_version: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
     )
 
     auth_tokens: Mapped[list["AuthToken"]] = relationship(

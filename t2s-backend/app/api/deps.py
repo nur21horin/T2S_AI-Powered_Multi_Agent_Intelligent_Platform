@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import ServiceUnavailableError, UnauthorizedError
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
+from app.security.revocation import get_redis_client, is_access_token_revoked
 from app.security.tokens import InvalidAccessToken, decode_access_token
 from app.services.auth_service import AuthService
 from app.services.email_service import EmailSender
@@ -53,13 +54,22 @@ def get_current_user(
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise UnauthorizedError("Authentication required.")
     try:
-        user_id = decode_access_token(credentials.credentials, request.app.state.settings)
+        claims = decode_access_token(credentials.credentials, request.app.state.settings)
     except InvalidAccessToken:
         raise UnauthorizedError("Authentication required.") from None
     except RuntimeError:
         raise ServiceUnavailableError("Authentication is not configured.") from None
 
-    user = UserRepository().get_by_id(db, user_id)
-    if user is None or not user.is_active or not user.is_verified:
+    user = UserRepository().get_by_id(db, claims.user_id)
+    if (
+        user is None
+        or not user.is_active
+        or not user.is_verified
+        or user.auth_version != claims.auth_version
+    ):
+        raise UnauthorizedError("Authentication required.")
+    redis_client = get_redis_client(request)
+    revoked = is_access_token_revoked(redis_client, claims.jti)
+    if revoked:
         raise UnauthorizedError("Authentication required.")
     return user

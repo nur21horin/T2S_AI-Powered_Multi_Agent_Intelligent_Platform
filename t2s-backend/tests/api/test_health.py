@@ -4,6 +4,11 @@ def test_health_ok(client):
     assert r.json() == {"status": "ok"}
 
 
+def test_liveness_does_not_depend_on_redis(client):
+    client.app.state.redis_client = None
+    assert client.get("/api/v1/health").status_code == 200
+
+
 def test_request_id_generated_and_returned(client):
     r = client.get("/api/v1/health")
     assert len(r.headers["x-request-id"]) >= 8

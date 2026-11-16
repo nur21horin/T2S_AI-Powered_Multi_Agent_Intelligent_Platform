@@ -1,4 +1,5 @@
 import os
+import time
 from pathlib import Path
 
 import pytest
@@ -6,6 +7,7 @@ from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
+from redis.exceptions import ConnectionError as RedisConnectionError
 from sqlalchemy import create_engine, delete, select
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import NullPool
@@ -17,6 +19,49 @@ from app.main import create_app
 from tests.factories import FakeEmailSender
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
+
+
+class FakeRedis:
+    """Small deterministic Redis substitute for tests; never used by application code."""
+
+    def __init__(self) -> None:
+        self.values: dict[str, tuple[str, float]] = {}
+        self.available = True
+        self.operations: list[str] = []
+
+    def _require_available(self) -> None:
+        if not self.available:
+            raise RedisConnectionError("test Redis unavailable")
+
+    def exists(self, name: str) -> int:
+        self._require_available()
+        item = self.values.get(name)
+        if item is None:
+            return 0
+        if item[1] <= time.time():
+            del self.values[name]
+            return 0
+        return 1
+
+    def set(self, name: str, value: str, *, pxat: int) -> bool:
+        self._require_available()
+        self.operations.append("redis:set")
+        self.values[name] = (value, pxat / 1000)
+        return True
+
+    def ttl(self, name: str) -> int:
+        self._require_available()
+        if not self.exists(name):
+            return -2
+        return max(0, int(self.values[name][1] - time.time()))
+
+    def close(self) -> None:
+        self.closed = True
+
+
+@pytest.fixture
+def fake_redis() -> FakeRedis:
+    return FakeRedis()
 
 
 @pytest.fixture
@@ -38,6 +83,7 @@ def app(settings):
 @pytest.fixture
 def client(app):
     # raise_server_exceptions=False lets us assert the real 500 response body.
+    app.state.redis_client = FakeRedis()
     with TestClient(app, raise_server_exceptions=False) as c:
         yield c
 
@@ -81,6 +127,7 @@ def db_client(test_database_url, migrated_test_database):
     app = create_app(s)
     fake_sender = FakeEmailSender()
     app.state.email_sender = fake_sender
+    app.state.redis_client = FakeRedis()
     try:
         with TestClient(app, raise_server_exceptions=False) as c:
             yield c

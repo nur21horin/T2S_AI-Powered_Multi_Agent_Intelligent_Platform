@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shutil
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 
 from alembic import command
@@ -153,11 +154,78 @@ def test_auth_migration_upgrade_and_downgrade_on_isolated_test_schema(
                 connection.execute(text(f'SET LOCAL search_path TO "{schema_name}"'))
                 config.attributes["connection"] = connection
 
+                command.upgrade(config, "d713be9dc4b9")
+                existing_user_id = uuid.uuid4()
+                existing_token_id = uuid.uuid4()
+                now = datetime.now(UTC)
+                connection.execute(
+                    text(
+                        "INSERT INTO users "
+                        "(id, email, full_name, password_hash, role, is_active, is_verified, "
+                        "created_at, updated_at) VALUES "
+                        "(:id, :email, :full_name, :password_hash, :role, true, true, "
+                        ":created_at, :updated_at)"
+                    ),
+                    {
+                        "id": existing_user_id,
+                        "email": f"migration-{existing_user_id}@example.com",
+                        "full_name": "Existing User",
+                        "password_hash": "existing-hash",
+                        "role": "STUDENT",
+                        "created_at": now,
+                        "updated_at": now,
+                    },
+                )
+                connection.execute(
+                    text(
+                        "INSERT INTO auth_tokens "
+                        "(id, user_id, token_hash, purpose, family_id, expires_at, created_at) "
+                        "VALUES (:id, :user_id, :token_hash, 'REFRESH', :family_id, "
+                        ":expires_at, :created_at)"
+                    ),
+                    {
+                        "id": existing_token_id,
+                        "user_id": existing_user_id,
+                        "token_hash": uuid.uuid4().hex * 2,
+                        "family_id": uuid.uuid4(),
+                        "expires_at": now,
+                        "created_at": now,
+                    },
+                )
                 command.upgrade(config, "head")
+                assert MigrationContext.configure(connection).get_current_revision() == (
+                    "8a6c2f17d4b0"
+                )
+                assert {"users", "auth_tokens"} <= set(inspect(connection).get_table_names())
+                users_columns = {
+                    column["name"] for column in inspect(connection).get_columns("users")
+                }
+                assert "auth_version" in users_columns
+                existing = connection.execute(
+                    text("SELECT auth_version FROM users WHERE id = :id"),
+                    {"id": existing_user_id},
+                ).scalar_one()
+                assert existing == 0
+                assert connection.execute(
+                    text("SELECT id FROM auth_tokens WHERE id = :id"),
+                    {"id": existing_token_id},
+                ).scalar_one() == existing_token_id
+
+                command.downgrade(config, "d713be9dc4b9")
                 assert MigrationContext.configure(connection).get_current_revision() == (
                     "d713be9dc4b9"
                 )
-                assert {"users", "auth_tokens"} <= set(inspect(connection).get_table_names())
+                assert "auth_version" not in {
+                    column["name"] for column in inspect(connection).get_columns("users")
+                }
+                assert connection.execute(
+                    text("SELECT id FROM users WHERE id = :id"),
+                    {"id": existing_user_id},
+                ).scalar_one() == existing_user_id
+                assert connection.execute(
+                    text("SELECT id FROM auth_tokens WHERE id = :id"),
+                    {"id": existing_token_id},
+                ).scalar_one() == existing_token_id
 
                 command.downgrade(config, "base")
                 assert MigrationContext.configure(connection).get_current_revision() is None

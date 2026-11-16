@@ -13,7 +13,7 @@ shape. Browser requests that establish or use authentication cookies must use
 | `POST /register` | `email`, `full_name`, `password` | `201` safe user object; always creates a `STUDENT` and sends verification email |
 | `POST /login` | `email`, `password` | Access JWT, CSRF token, safe user object; sets refresh and CSRF cookies |
 | `POST /refresh` | CSRF header and cookies | Rotated access JWT, CSRF token, safe user object; rotates cookies |
-| `POST /logout` | CSRF header and cookies | Revokes refresh-token family and clears cookies |
+| `POST /logout` | CSRF header and cookies; optional Bearer access JWT | Revokes refresh-token family; when a valid unexpired Bearer token is supplied, also revokes its access `jti`; clears cookies |
 | `GET /csrf` | Cookies | Returns current CSRF token for a page reload; requires allowed `Origin` |
 | `GET /me` | Bearer access JWT | Safe current-user object |
 | `POST /email/verify` | `token` | Verifies the email; token is single-use and expires |
@@ -41,8 +41,24 @@ normalized. Registration ignores any client-supplied role and assigns
 4. After a page reload, call `GET /csrf` with credentials enabled and the
    browser-supplied `Origin`, then use the returned CSRF token for refresh or
    logout.
-5. Call `POST /logout` with credentials and the CSRF header to revoke the
-   refresh family and clear the cookies.
+5. Call `POST /logout` with credentials, the CSRF header, and the current
+   `Authorization: Bearer <access_token>` value to revoke both that access JWT
+   and its refresh-token family. If the access token is already expired or is
+   omitted, refresh-family revocation still works and the access JWT cannot be
+   used past its expiration.
+
+Logout writes a valid access token's `jti` to Redis before revoking its refresh
+family in PostgreSQL. Redis failure returns HTTP 503 without changing the
+refresh family or clearing cookies. If PostgreSQL fails after Redis succeeds,
+the access token remains revoked, the transaction is rolled back, and the
+request returns HTTP 503. Retrying with the same cookies and Bearer token is
+safe.
+
+Access JWTs include an `auth_version` claim checked against the current user
+record. Password change and reset increment the database version, invalidating
+all previously issued access JWTs. `GET /me` and other authenticated routes
+return HTTP 503 if Redis is unavailable for the required revocation check.
+Configure `REDIS_URL`; do not rely on a per-process fallback.
 
 The refresh cookie defaults to `HttpOnly`, path `/api/v1/auth`, and
 `SameSite=Lax`. `Secure` is forced in production and for `SameSite=None`.

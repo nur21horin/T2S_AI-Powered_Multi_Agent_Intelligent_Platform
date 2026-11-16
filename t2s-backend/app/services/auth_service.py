@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
@@ -13,7 +13,14 @@ from app.repositories.token_repository import TokenRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import RegisterRequest
 from app.security.passwords import hash_password, password_hash_needs_rehash, verify_password
-from app.security.tokens import generate_opaque_token, hash_opaque_token, create_access_token
+from app.security.revocation import RedisRevocationStore, revoke_access_token
+from app.security.tokens import (
+    InvalidAccessToken,
+    create_access_token,
+    decode_access_token_for_logout,
+    generate_opaque_token,
+    hash_opaque_token,
+)
 from app.security.csrf import is_valid_csrf_token
 from app.services.email_service import EmailSender
 
@@ -73,7 +80,7 @@ class AuthService:
             raise UnauthorizedError("Invalid email or password.")
         if password_hash_needs_rehash(user.password_hash):
             user.password_hash = hash_password(password)
-        access_token = create_access_token(user.id, self.settings)
+        access_token = create_access_token(user.id, self.settings, user.auth_version)
         raw_refresh, _ = self._new_refresh_token(user.id)
         self.db.commit()
         return user, access_token, raw_refresh
@@ -99,17 +106,46 @@ class AuthService:
             self.db.commit()
             raise UnauthorizedError("Authentication required.")
 
-        access_token = create_access_token(user.id, self.settings)
+        access_token = create_access_token(user.id, self.settings, user.auth_version)
         raw_next, _ = self._new_refresh_token(user.id, family_id=token.family_id)
         self.db.commit()
         return user, access_token, raw_next
 
-    def logout(self, raw_refresh: str | None) -> None:
+    def logout(
+        self,
+        raw_refresh: str | None,
+        access_token: str | None = None,
+        revocation_store: RedisRevocationStore | None = None,
+    ) -> None:
+        claims = None
+        if access_token:
+            try:
+                claims = decode_access_token_for_logout(access_token, self.settings)
+            except InvalidAccessToken:
+                # Invalid and expired access tokens cannot authenticate later requests.
+                claims = None
+
+        if claims is not None and claims.expires_at > datetime.now(UTC):
+            if revocation_store is None:
+                raise ServiceUnavailableError("Token revocation service is unavailable.")
+            # Revoke the presented access token first. Redis and PostgreSQL do not
+            # share a transaction, so this makes Redis outages leave refresh state
+            # untouched; retries repeat this write idempotently.
+            revoke_access_token(revocation_store, claims)
+
         if raw_refresh:
-            token = self.tokens.get_by_hash(self.db, hash_opaque_token(raw_refresh))
-            if token and token.purpose == AuthTokenPurpose.REFRESH and token.family_id:
-                self.tokens.revoke_family(self.db, token.family_id, datetime.now(UTC))
+            try:
+                # get_by_hash deliberately includes consumed/revoked rows. Their
+                # family_id remains available for safe retries of this operation.
+                token = self.tokens.get_by_hash(self.db, hash_opaque_token(raw_refresh))
+                if token and token.purpose == AuthTokenPurpose.REFRESH and token.family_id:
+                    self.tokens.revoke_family(self.db, token.family_id, datetime.now(UTC))
                 self.db.commit()
+            except SQLAlchemyError as exc:
+                self.db.rollback()
+                raise ServiceUnavailableError(
+                    "Logout could not be completed. Retry the request."
+                ) from exc
 
     def current_csrf_token(self, raw_refresh: str | None, csrf_token: str | None) -> str:
         if not raw_refresh or not csrf_token or not is_valid_csrf_token(
@@ -191,6 +227,7 @@ class AuthService:
             self.db.rollback()
             raise UnauthorizedError("Password reset link is invalid or expired.")
         user.password_hash = hash_password(new_password)
+        self.users.increment_auth_version(self.db, user)
         self.tokens.revoke_user_refresh_tokens(self.db, user.id, now)
         self.db.commit()
 
@@ -199,6 +236,7 @@ class AuthService:
             raise UnauthorizedError("Current password is incorrect.")
         now = datetime.now(UTC)
         user.password_hash = hash_password(new_password)
+        self.users.increment_auth_version(self.db, user)
         self.tokens.revoke_user_refresh_tokens(self.db, user.id, now)
         self.db.commit()
 

@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     # Database. SecretStr keeps the password out of repr()/logs.
     database_url: SecretStr | None = None
     test_database_url: SecretStr | None = None  # used by the test-suite only
+    redis_url: SecretStr | None = None
     db_pool_size: int = 5
     db_max_overflow: int = 10
     db_pool_timeout: int = 30  # seconds to wait for a free pooled connection

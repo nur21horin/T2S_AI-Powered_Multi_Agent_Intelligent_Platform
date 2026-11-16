@@ -18,9 +18,15 @@ from app.security.cookies import set_auth_cookies
 
 def test_access_token_round_trip_and_claim_validation(settings):
     user_id = uuid4()
-    token = create_access_token(user_id, settings)
+    token = create_access_token(user_id, settings, auth_version=3)
 
-    assert decode_access_token(token, settings) == user_id
+    claims = decode_access_token(token, settings)
+    assert claims.user_id == user_id
+    assert claims.auth_version == 3
+    assert claims.jti
+    assert decode_access_token(
+        create_access_token(user_id, settings, auth_version=3), settings
+    ).jti != claims.jti
     with pytest.raises(InvalidAccessToken):
         decode_access_token(token, settings.model_copy(update={"jwt_audience": "wrong"}))
 
@@ -32,6 +38,7 @@ def test_access_token_rejects_expired_and_wrong_type_tokens(settings):
             "sub": str(uuid4()), "type": "access", "iss": settings.jwt_issuer,
             "aud": settings.jwt_audience, "iat": now - timedelta(minutes=10),
             "exp": now - timedelta(minutes=1), "jti": str(uuid4()),
+            "auth_version": 0,
         },
         settings.jwt_secret_key.get_secret_value(),
         algorithm=settings.jwt_algorithm,
@@ -41,6 +48,7 @@ def test_access_token_rejects_expired_and_wrong_type_tokens(settings):
             "sub": str(uuid4()), "type": "refresh", "iss": settings.jwt_issuer,
             "aud": settings.jwt_audience, "iat": now,
             "exp": now + timedelta(minutes=5), "jti": str(uuid4()),
+            "auth_version": 0,
         },
         settings.jwt_secret_key.get_secret_value(),
         algorithm=settings.jwt_algorithm,
@@ -52,6 +60,31 @@ def test_access_token_rejects_expired_and_wrong_type_tokens(settings):
         decode_access_token(wrong_type, settings)
     with pytest.raises(InvalidAccessToken):
         decode_access_token("not-a-jwt", settings)
+
+
+def test_access_token_requires_valid_auth_version_and_jti(settings):
+    now = datetime.now(UTC)
+    base_claims = {
+        "sub": str(uuid4()),
+        "type": "access",
+        "iss": settings.jwt_issuer,
+        "aud": settings.jwt_audience,
+        "iat": now,
+        "exp": now + timedelta(minutes=5),
+        "jti": str(uuid4()),
+    }
+    secret = settings.jwt_secret_key.get_secret_value()
+    missing_version = jwt.encode(base_claims, secret, algorithm=settings.jwt_algorithm)
+    invalid_version_claims = {**base_claims, "auth_version": True}
+    invalid_version = jwt.encode(
+        invalid_version_claims, secret, algorithm=settings.jwt_algorithm
+    )
+    invalid_jti_claims = {**base_claims, "auth_version": 0, "jti": "not-a-uuid"}
+    invalid_jti = jwt.encode(invalid_jti_claims, secret, algorithm=settings.jwt_algorithm)
+
+    for token in (missing_version, invalid_version, invalid_jti):
+        with pytest.raises(InvalidAccessToken):
+            decode_access_token(token, settings)
 
 
 def test_opaque_tokens_are_high_entropy_and_only_compared_by_hash():
@@ -67,7 +100,7 @@ def test_opaque_tokens_are_high_entropy_and_only_compared_by_hash():
 def test_missing_signing_secret_fails_closed():
     settings = Settings(_env_file=None, app_env="testing", jwt_secret_key=None)
     with pytest.raises(RuntimeError):
-        create_access_token(uuid4(), settings)
+        create_access_token(uuid4(), settings, auth_version=0)
 
 
 def test_refresh_cookie_is_http_only_and_secure_in_production(settings):

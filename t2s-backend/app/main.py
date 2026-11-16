@@ -28,6 +28,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = settings
     app.state.email_sender = SMTPEmailService(settings)
+    app.state.redis_client = None
     register_exception_handlers(app)
 
     # add_middleware: last added is outermost. Order: RequestID > AccessLog > TrustedHost > CORS

@@ -76,7 +76,17 @@ def logout(
 ) -> MessageResponse:
     settings: Settings = request.app.state.settings
     require_cookie_csrf(request, settings)
-    auth.logout(request.cookies.get(settings.refresh_cookie_name))
+    authorization = request.headers.get("authorization", "").split()
+    access_token = (
+        authorization[1]
+        if len(authorization) == 2 and authorization[0].lower() == "bearer"
+        else None
+    )
+    auth.logout(
+        request.cookies.get(settings.refresh_cookie_name),
+        access_token=access_token,
+        revocation_store=request.app.state.redis_client,
+    )
     clear_auth_cookies(response, settings)
     return MessageResponse(message="Logged out.")
 

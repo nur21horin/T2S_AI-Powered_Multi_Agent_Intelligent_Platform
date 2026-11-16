@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.models.user import User
@@ -17,3 +17,17 @@ class UserRepository:
         db.add(user)
         db.flush()
         return user
+
+    def increment_auth_version(self, db: Session, user: User) -> int:
+        """Atomically increment a user's token version in the current transaction."""
+        version = db.execute(
+            update(User)
+            .where(User.id == user.id)
+            .values(auth_version=User.auth_version + 1)
+            .returning(User.auth_version)
+            .execution_options(synchronize_session=False)
+        ).scalar_one()
+        # Keep the ORM attribute expired so a later flush cannot overwrite the
+        # database-side increment with a value read before a concurrent update.
+        db.expire(user, ["auth_version"])
+        return version
