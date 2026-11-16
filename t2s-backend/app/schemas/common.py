@@ -1,0 +1,24 @@
+"""Shared API schemas. Success responses return the resource directly; errors use ErrorResponse."""
+from typing import Any
+
+from pydantic import BaseModel
+
+
+class ErrorBody(BaseModel):
+    code: str
+    message: str
+    details: Any | None = None
+    request_id: str | None = None
+
+
+class ErrorResponse(BaseModel):
+    error: ErrorBody
+
+
+class HealthResponse(BaseModel):
+    status: str
+
+
+class ReadinessResponse(BaseModel):
+    status: str
+    database: str
