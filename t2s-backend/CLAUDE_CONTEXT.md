@@ -19,7 +19,7 @@ Cross-cutting: core (config, logging, exceptions), security (passwords, tokens, 
 
 ## Conventions
 PEP8, type hints, UUID primary keys, timestamps (created_at/updated_at, UTC), soft-delete only where justified,
-sync vs async decided in Phase 1 and recorded here. No secrets in code; .env never committed.
+**Sync** SQLAlchemy (psycopg3) with plain `def` endpoints (decided Phase 1: simpler, safe with CPU-bound Argon2). No secrets in code; .env never committed.
 
 ## Rules for Claude
 One feature at a time: Explain -> Implement (into existing files) -> Validate (really run tests) -> Report -> STOP.
@@ -28,3 +28,8 @@ Update DEVELOPMENT_PROGRESS.md after each feature.
 
 ## Decisions log
 - (Phase 0) Resource and ResearchOpportunity models included for task resources and AI search tools; no CRUD planned unless requested.
+- (Phase 1) Success responses return the resource directly (no envelope). Errors: {"error": {code, message, details, request_id}}.
+- (Phase 1) Validation errors strip submitted input (no secret echo). Docs/OpenAPI disabled when APP_ENV=production.
+- (Phase 1) Middleware order (outer->inner): RequestID > AccessLog > TrustedHost > CORS. Security headers come in Phase 3.
+- (Phase 1) requirements pin top-level deps only, added per feature. uvicorn without [standard] for now (Windows-safe); revisit in Phase 14.
+- App factory: app.main.create_app(settings). Tests build Settings(_env_file=None, ...).
