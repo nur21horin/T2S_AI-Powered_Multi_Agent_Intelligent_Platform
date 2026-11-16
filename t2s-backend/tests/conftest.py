@@ -26,6 +26,8 @@ class FakeRedis:
 
     def __init__(self) -> None:
         self.values: dict[str, tuple[str, float]] = {}
+        self.rate_limit_counters: dict[str, tuple[int, float | None]] = {}
+        self.rate_limit_now = 1_000_000.0
         self.available = True
         self.operations: list[str] = []
 
@@ -54,6 +56,26 @@ class FakeRedis:
         if not self.exists(name):
             return -2
         return max(0, int(self.values[name][1] - time.time()))
+
+    def eval(self, script: str, numkeys: int, *keys_and_args: object) -> list[int]:
+        """Emulate the limiter Lua script deterministically for unit tests."""
+        self._require_available()
+        if numkeys != 1 or len(keys_and_args) != 2:
+            raise ValueError("unexpected rate-limit script arguments")
+        key, window_ms = keys_and_args
+        if not isinstance(key, str) or not isinstance(window_ms, int):
+            raise ValueError("invalid rate-limit script arguments")
+        now = self.rate_limit_now
+        count, expires_at = self.rate_limit_counters.get(key, (0, None))
+        if expires_at is not None and expires_at <= now:
+            count, expires_at = 0, None
+        count += 1
+        if count == 1 or expires_at is None:
+            expires_at = now + window_ms / 1000
+        ttl_ms = max(0, int((expires_at - now) * 1000))
+        self.rate_limit_counters[key] = (count, expires_at)
+        self.operations.append("redis:eval")
+        return [count, ttl_ms]
 
     def close(self) -> None:
         self.closed = True
