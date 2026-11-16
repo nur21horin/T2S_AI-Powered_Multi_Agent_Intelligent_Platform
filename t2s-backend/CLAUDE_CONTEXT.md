@@ -33,3 +33,6 @@ Update DEVELOPMENT_PROGRESS.md after each feature.
 - (Phase 1) Middleware order (outer->inner): RequestID > AccessLog > TrustedHost > CORS. Security headers come in Phase 3.
 - (Phase 1) requirements pin top-level deps only, added per feature. uvicorn without [standard] for now (Windows-safe); revisit in Phase 14.
 - App factory: app.main.create_app(settings). Tests build Settings(_env_file=None, ...).
+- (1.2) DB: engine created lazily in lifespan (app.state.engine / session_factory); app starts even if DB is down. get_db(request) in api/deps.py = one Session per request, services commit explicitly, rollback on error, always closed. pool_pre_ping, connect_timeout 5s, statement_timeout 30s. DATABASE_URL is SecretStr.
+- (1.2) /health = liveness (no DB). /health/ready = readiness (SELECT 1, 503 if DB down) -> used by Nginx/LB later.
+- (1.2) Dev DB: native PostgreSQL 16 on Windows (no Docker until Phase 14). Databases: t2s (dev), t2s_test (tests). Tests need TEST_DATABASE_URL (env or .env); DB name must end with _test or tests fail; DB tests skip if unset.

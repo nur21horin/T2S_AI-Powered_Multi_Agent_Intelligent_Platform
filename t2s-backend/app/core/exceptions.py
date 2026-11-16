@@ -47,6 +47,10 @@ class TooManyRequestsError(AppException):
     status_code, code, message = 429, "rate_limited", "Too many requests."
 
 
+class ServiceUnavailableError(AppException):
+    status_code, code, message = 503, "service_unavailable", "Service temporarily unavailable."
+
+
 def _error_response(status: int, code: str, message: str, details: Any = None,
                     headers: dict[str, str] | None = None) -> JSONResponse:
     body = {"error": {"code": code, "message": message, "details": details,

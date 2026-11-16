@@ -20,3 +20,9 @@ def test_wildcard_cors_origin_is_rejected():
 def test_is_production_flag():
     assert Settings(_env_file=None, app_env="production").is_production
     assert not Settings(_env_file=None, app_env="development").is_production
+
+
+def test_database_url_is_secret_in_repr():
+    s = Settings(_env_file=None, database_url="postgresql+psycopg://u:TopSecret@h/db")
+    assert "TopSecret" not in repr(s) and "TopSecret" not in str(s.model_dump())
+    assert "TopSecret" in s.database_url.get_secret_value()

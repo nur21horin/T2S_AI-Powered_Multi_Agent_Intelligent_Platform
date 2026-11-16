@@ -25,6 +25,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         openapi_url=None if settings.is_production else f"{settings.api_v1_prefix}/openapi.json",
         responses={422: {"model": ErrorResponse}},
     )
+    app.state.settings = settings
     register_exception_handlers(app)
 
     # add_middleware: last added is outermost. Order: RequestID > AccessLog > TrustedHost > CORS
