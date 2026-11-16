@@ -10,6 +10,7 @@ from app.core.logging import setup_logging
 from app.middleware.access_log import AccessLogMiddleware
 from app.middleware.request_id import RequestIDMiddleware
 from app.schemas.common import ErrorResponse
+from app.services.email_service import SMTPEmailService
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -26,6 +27,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         responses={422: {"model": ErrorResponse}},
     )
     app.state.settings = settings
+    app.state.email_sender = SMTPEmailService(settings)
     register_exception_handlers(app)
 
     # add_middleware: last added is outermost. Order: RequestID > AccessLog > TrustedHost > CORS

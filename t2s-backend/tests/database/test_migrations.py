@@ -18,6 +18,7 @@ from sqlalchemy import (
     Table,
     UniqueConstraint,
     create_engine,
+    inspect,
     text,
 )
 from sqlalchemy.pool import NullPool
@@ -62,11 +63,12 @@ def test_model_package_imports_all_modules_for_metadata_registration():
         "team",
         "user",
     }
-    assert set(models.__all__) == expected_modules
+    assert expected_modules <= set(models.__all__)
     assert all(
         getattr(models, module).__name__ == f"app.models.{module}"
         for module in expected_modules
     )
+    assert {"users", "auth_tokens"} <= set(Base.metadata.tables)
 
 
 def test_naming_convention_generates_stable_constraint_and_index_names():
@@ -130,6 +132,36 @@ def test_autogenerate_upgrade_and_downgrade_on_isolated_test_schema(
 
                 command.downgrade(config, "base")
                 assert MigrationContext.configure(connection).get_current_revision() is None
+            finally:
+                transaction.rollback()
+    finally:
+        engine.dispose()
+
+
+def test_auth_migration_upgrade_and_downgrade_on_isolated_test_schema(
+    test_database_url: str,
+):
+    """Apply the committed auth revision, then roll it back without persisting DDL."""
+    engine = create_engine(test_database_url, poolclass=NullPool)
+    config = Config(str(BACKEND_ROOT / "alembic.ini"))
+    schema_name = f"auth_migration_test_{uuid.uuid4().hex}"
+    try:
+        with engine.connect() as connection:
+            transaction = connection.begin()
+            try:
+                connection.execute(text(f'CREATE SCHEMA "{schema_name}"'))
+                connection.execute(text(f'SET LOCAL search_path TO "{schema_name}"'))
+                config.attributes["connection"] = connection
+
+                command.upgrade(config, "head")
+                assert MigrationContext.configure(connection).get_current_revision() == (
+                    "d713be9dc4b9"
+                )
+                assert {"users", "auth_tokens"} <= set(inspect(connection).get_table_names())
+
+                command.downgrade(config, "base")
+                assert MigrationContext.configure(connection).get_current_revision() is None
+                assert not {"users", "auth_tokens"} & set(inspect(connection).get_table_names())
             finally:
                 transaction.rollback()
     finally:

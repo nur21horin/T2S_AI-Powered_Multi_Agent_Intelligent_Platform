@@ -1,10 +1,22 @@
 import os
+from pathlib import Path
 
 import pytest
+from alembic import command
+from alembic.config import Config
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
+from sqlalchemy import create_engine, delete, select
+from sqlalchemy.orm import Session
+from sqlalchemy.pool import NullPool
 
 from app.core.config import Settings
+from app.models.auth_token import AuthToken
+from app.models.user import User
 from app.main import create_app
+from tests.factories import FakeEmailSender
+
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.fixture
@@ -14,6 +26,7 @@ def settings() -> Settings:
         app_env="testing",
         cors_allowed_origins=["http://localhost:3000"],
         trusted_hosts=["testserver"],
+        jwt_secret_key=SecretStr("unit-test-only-secret-key-with-more-than-32-bytes"),
     )
 
 
@@ -43,14 +56,42 @@ def test_database_url() -> str:
     return url
 
 
+@pytest.fixture(scope="session")
+def migrated_test_database(test_database_url: str) -> None:
+    """Upgrade the dedicated *_test database before authenticated API tests."""
+    engine = create_engine(test_database_url, poolclass=NullPool)
+    config = Config(str(BACKEND_ROOT / "alembic.ini"))
+    try:
+        with engine.connect() as connection:
+            config.attributes["connection"] = connection
+            command.upgrade(config, "head")
+    finally:
+        engine.dispose()
+
+
 @pytest.fixture
-def db_client(test_database_url):
+def db_client(test_database_url, migrated_test_database):
     from pydantic import SecretStr
 
     s = Settings(
         _env_file=None, app_env="testing", trusted_hosts=["testserver"],
+        jwt_secret_key=SecretStr("unit-test-only-secret-key-with-more-than-32-bytes"),
         database_url=SecretStr(test_database_url), db_pool_size=2, db_max_overflow=0,
     )
     app = create_app(s)
-    with TestClient(app, raise_server_exceptions=False) as c:
-        yield c
+    fake_sender = FakeEmailSender()
+    app.state.email_sender = fake_sender
+    try:
+        with TestClient(app, raise_server_exceptions=False) as c:
+            yield c
+    finally:
+        emails = set(fake_sender.verification_tokens) | set(fake_sender.password_reset_tokens)
+        if emails:
+            cleanup_engine = create_engine(test_database_url, poolclass=NullPool)
+            try:
+                with Session(cleanup_engine) as db, db.begin():
+                    user_ids = select(User.id).where(User.email.in_(emails))
+                    db.execute(delete(AuthToken).where(AuthToken.user_id.in_(user_ids)))
+                    db.execute(delete(User).where(User.email.in_(emails)))
+            finally:
+                cleanup_engine.dispose()

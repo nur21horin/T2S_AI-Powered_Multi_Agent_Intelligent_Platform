@@ -5,6 +5,9 @@ models by string name in relationships. The base module deliberately does not
 import this package, which keeps metadata ownership one-way and avoids cycles.
 """
 
+from app.models.auth_token import AuthToken
+from app.models.user import User
+
 from app.models import (
     ai,
     audit_log,
@@ -27,6 +30,8 @@ from app.models import (
 )
 
 __all__ = [
+    "AuthToken",
+    "User",
     "ai",
     "audit_log",
     "auth_token",

@@ -2,7 +2,7 @@
 from functools import lru_cache
 from typing import Annotated
 
-from pydantic import SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -30,6 +30,34 @@ class Settings(BaseSettings):
     db_connect_timeout: int = 5  # seconds
     db_statement_timeout_ms: int = 30000
 
+    # Authentication. Secrets remain masked in reprs and settings error output.
+    jwt_secret_key: SecretStr | None = None
+    jwt_algorithm: str = "HS256"
+    jwt_issuer: str = "t2s-backend"
+    jwt_audience: str = "t2s-api"
+    access_token_expire_minutes: int = Field(default=15, gt=0)
+    refresh_token_expire_days: int = Field(default=7, gt=0)
+    email_token_expire_minutes: int = Field(default=60, gt=0)
+    password_reset_token_expire_minutes: int = Field(default=30, gt=0)
+
+    # Refresh and CSRF cookies. Secure is forced on in production by the cookie helper.
+    cookie_secure: bool = False
+    cookie_samesite: str = "lax"
+    cookie_domain: str | None = None
+    cookie_path: str = "/api/v1/auth"
+    refresh_cookie_name: str = "t2s_refresh"
+    csrf_cookie_name: str = "t2s_csrf"
+
+    # SMTP is optional at startup, but auth email workflows fail closed if it is absent.
+    frontend_base_url: str | None = None
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: SecretStr | None = None
+    email_from: str | None = None
+    smtp_starttls: bool = True
+    smtp_use_ssl: bool = False
+
     @field_validator("cors_allowed_origins", "trusted_hosts", mode="before")
     @classmethod
     def _split_csv(cls, value: object) -> object:
@@ -44,6 +72,30 @@ class Settings(BaseSettings):
         if "*" in value:
             raise ValueError("CORS_ALLOWED_ORIGINS must list explicit origins, not '*'")
         return value
+
+    @field_validator("jwt_algorithm")
+    @classmethod
+    def _only_hmac_sha256(cls, value: str) -> str:
+        if value != "HS256":
+            raise ValueError("Only HS256 is currently supported for JWT signing.")
+        return value
+
+    @field_validator("cookie_samesite")
+    @classmethod
+    def _valid_cookie_samesite(cls, value: str) -> str:
+        normalized = value.lower()
+        if normalized not in {"lax", "strict", "none"}:
+            raise ValueError("COOKIE_SAMESITE must be lax, strict, or none.")
+        return normalized
+
+    @model_validator(mode="after")
+    def _production_auth_secrets(self) -> "Settings":
+        if self.is_production and (
+            self.jwt_secret_key is None
+            or len(self.jwt_secret_key.get_secret_value().encode("utf-8")) < 32
+        ):
+            raise ValueError("JWT_SECRET_KEY must contain at least 32 bytes in production.")
+        return self
 
     @property
     def is_production(self) -> bool:
