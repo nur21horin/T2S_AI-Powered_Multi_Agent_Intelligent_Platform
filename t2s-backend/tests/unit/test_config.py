@@ -22,6 +22,7 @@ def test_is_production_flag():
         _env_file=None,
         app_env="production",
         jwt_secret_key=SecretStr("production-test-secret-key-over-32-bytes-long"),
+        rate_limit_key_secret=SecretStr("unit-test-rate-limit-secret-with-32-bytes"),
     ).is_production
     assert not Settings(_env_file=None, app_env="development").is_production
 
@@ -29,6 +30,35 @@ def test_is_production_flag():
 def test_production_requires_a_long_jwt_signing_key():
     with pytest.raises(ValidationError):
         Settings(_env_file=None, app_env="production", jwt_secret_key="too-short")
+
+
+def test_production_requires_rate_limit_key_secret():
+    with pytest.raises(ValidationError):
+        Settings(
+            _env_file=None,
+            app_env="production",
+            jwt_secret_key=SecretStr("production-jwt-secret-key-with-at-least-32-bytes"),
+        )
+
+
+@pytest.mark.parametrize("secret", ["", "short-secret", " " * 32])
+def test_rate_limit_key_secret_rejects_empty_or_short_values(secret):
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, rate_limit_key_secret=SecretStr(secret))
+
+
+def test_valid_rate_limit_key_secret_is_masked():
+    secret = "test-only-rate-limit-secret-with-32-bytes"
+    settings = Settings(
+        _env_file=None,
+        app_env="production",
+        jwt_secret_key=SecretStr("production-jwt-secret-key-with-at-least-32-bytes"),
+        rate_limit_key_secret=SecretStr(secret),
+    )
+
+    assert settings.rate_limit_key_secret.get_secret_value() == secret
+    assert secret not in repr(settings)
+    assert secret not in str(settings.model_dump())
 
 
 def test_database_url_is_secret_in_repr():

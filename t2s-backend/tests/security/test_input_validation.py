@@ -47,6 +47,7 @@ def test_docs_disabled_in_production():
         app_env="production",
         trusted_hosts=["testserver"],
         jwt_secret_key=SecretStr("production-test-secret-key-over-32-bytes-long"),
+        rate_limit_key_secret=SecretStr("unit-test-rate-limit-secret-with-32-bytes"),
     )
     c = TestClient(create_app(s), raise_server_exceptions=False)
     assert c.get("/docs").status_code == 404

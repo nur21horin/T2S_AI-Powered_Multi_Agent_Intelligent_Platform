@@ -1,16 +1,24 @@
 from math import ceil
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import ResponseError
+from starlette.requests import Request
 
+from app.api.v1.endpoints.auth import _client_ip
 from app.core.exceptions import ServiceUnavailableError
 from app.security.rate_limit import (
     RATE_LIMIT_KEY_PREFIX,
+    _MULTI_FIXED_WINDOW_SCRIPT,
     RateLimitResult,
+    RateLimitRule,
     consume_rate_limit,
+    consume_rate_limits,
     enforce_rate_limit,
+    identifier_digest,
     rate_limit_key,
 )
 
@@ -103,6 +111,207 @@ def test_rate_limit_key_requires_opaque_digest_and_safe_scope():
             limit=1,
             window_seconds=60,
         )
+
+
+def test_identifier_hmac_is_stable_and_domain_separated():
+    secret = SecretStr("unit-test-rate-limit-secret-with-32-bytes")
+    email_digest = identifier_digest(secret, "email", " Student@Example.com ")
+
+    assert email_digest == identifier_digest(secret, "email", "student@example.com")
+    assert identifier_digest(secret, "email", "192.0.2.1") != identifier_digest(
+        secret, "ip", "192.0.2.1"
+    )
+    assert email_digest != identifier_digest(secret, "email", "other@example.com")
+    assert len(email_digest) == 64
+    assert email_digest == email_digest.lower()
+
+
+def test_ip_and_uuid_identifier_canonicalization():
+    secret = SecretStr("unit-test-rate-limit-secret-with-32-bytes")
+
+    assert identifier_digest(secret, "ip", "192.0.2.1") == identifier_digest(
+        secret, "ip", "::ffff:192.0.2.1"
+    )
+    assert identifier_digest(secret, "ip", "2001:0db8:0:0::1") == identifier_digest(
+        secret, "ip", "2001:db8::1"
+    )
+    user_id = UUID("12345678-1234-5678-1234-567812345678")
+    assert identifier_digest(secret, "user", user_id) == identifier_digest(
+        secret, "user", str(user_id).upper()
+    )
+
+
+def test_identifier_digests_keep_raw_values_out_of_redis_keys():
+    secret = SecretStr("unit-test-rate-limit-secret-with-32-bytes")
+    email = "sensitive.person@example.com"
+    digest = identifier_digest(secret, "email", email)
+    key = rate_limit_key("email-wide", digest)
+
+    assert email not in key
+    assert "sensitive" not in key
+
+
+def test_missing_or_weak_hmac_secret_fails_closed():
+    with pytest.raises(ServiceUnavailableError):
+        identifier_digest(None, "email", "person@example.com")
+    with pytest.raises(ServiceUnavailableError):
+        identifier_digest(SecretStr("too-short"), "email", "person@example.com")
+
+
+def test_multi_key_limits_consume_both_dimensions(fake_redis):
+    email_key = _key("forgot-email")
+    ip_key = rate_limit_key("forgot-ip", "b" * 64)
+    rules = (
+        RateLimitRule(email_key, 2, 3600),
+        RateLimitRule(ip_key, 3, 3600),
+    )
+
+    first = consume_rate_limits(fake_redis, rules=rules)
+    second = consume_rate_limits(fake_redis, rules=rules)
+    rejected = consume_rate_limits(fake_redis, rules=rules)
+
+    assert first == RateLimitResult(True, 1, 0)
+    assert second == RateLimitResult(True, 0, 0)
+    assert rejected.allowed is False
+    assert rejected.remaining == 0
+    assert rejected.retry_after_seconds == 3600
+    assert fake_redis.rate_limit_counters[email_key][0] == 3
+    assert fake_redis.rate_limit_counters[ip_key][0] == 3
+
+
+def test_multi_key_preflights_all_keys_before_any_write(fake_redis):
+    keys = (_key("preflight-one"), _key("preflight-two"))
+    rules = tuple(RateLimitRule(key, 3, 60) for key in keys)
+
+    consume_rate_limits(fake_redis, rules=rules)
+
+    assert fake_redis.rate_limit_events == [
+        ("preflight", keys[0]),
+        ("preflight", keys[1]),
+        ("write", keys[0]),
+        ("write", keys[1]),
+    ]
+    # FakeRedis models expected ordering. This source check ensures the actual
+    # Lua's PTTL preflight loop precedes its first mutating Redis command.
+    preflight_end = _MULTI_FIXED_WINDOW_SCRIPT.index("\nlocal allowed")
+    assert "redis.call('PTTL', KEYS[i])" in _MULTI_FIXED_WINDOW_SCRIPT[:preflight_end]
+    assert "redis.call('SET'" not in _MULTI_FIXED_WINDOW_SCRIPT[:preflight_end]
+    assert "redis.call('SET'" in _MULTI_FIXED_WINDOW_SCRIPT[preflight_end:]
+
+
+def test_multi_key_missing_keys_start_at_one_with_configured_window(fake_redis):
+    keys = (_key("missing-one"), _key("missing-two"))
+
+    consume_rate_limits(
+        fake_redis,
+        rules=(RateLimitRule(keys[0], 2, 30), RateLimitRule(keys[1], 2, 90)),
+    )
+
+    assert fake_redis.rate_limit_counters[keys[0]] == (
+        1,
+        fake_redis.rate_limit_now + 30,
+    )
+    assert fake_redis.rate_limit_counters[keys[1]] == (
+        1,
+        fake_redis.rate_limit_now + 90,
+    )
+
+
+def test_multi_key_positive_ttl_preserves_existing_expiration(fake_redis):
+    key = _key("preserve-ttl")
+    deadline = fake_redis.rate_limit_now + 17.25
+    fake_redis.rate_limit_counters[key] = (4, deadline)
+
+    result = consume_rate_limits(
+        fake_redis, rules=(RateLimitRule(key, 10, 60),)
+    )
+
+    assert result.allowed
+    assert fake_redis.rate_limit_counters[key] == (5, deadline)
+
+
+def test_multi_key_persistent_key_repairs_ttl_without_resetting_counter(fake_redis):
+    key = _key("persistent")
+    fake_redis.rate_limit_counters[key] = (7, None)
+
+    result = consume_rate_limits(
+        fake_redis, rules=(RateLimitRule(key, 10, 45),)
+    )
+
+    assert result.allowed
+    assert fake_redis.rate_limit_counters[key] == (
+        8,
+        fake_redis.rate_limit_now + 45,
+    )
+
+
+@pytest.mark.parametrize("unexpected_ttl", [0, -3])
+def test_multi_key_unexpected_ttl_fails_before_any_counter_mutation(
+    fake_redis, unexpected_ttl
+):
+    keys = (_key("valid-ttl"), _key("invalid-ttl"))
+    fake_redis.rate_limit_counters[keys[0]] = (2, fake_redis.rate_limit_now + 30)
+    fake_redis.rate_limit_counters[keys[1]] = (5, fake_redis.rate_limit_now + 30)
+    fake_redis.rate_limit_ttl_overrides[keys[1]] = unexpected_ttl
+    before = dict(fake_redis.rate_limit_counters)
+
+    with pytest.raises(ServiceUnavailableError):
+        consume_rate_limits(
+            fake_redis,
+            rules=(RateLimitRule(keys[0], 10, 60), RateLimitRule(keys[1], 10, 60)),
+        )
+
+    assert fake_redis.rate_limit_counters == before
+    assert not any(event == "write" for event, _key_name in fake_redis.rate_limit_events)
+
+
+def test_multi_key_redis_failure_returns_http_503(app, fake_redis):
+    fake_redis.available = False
+    app.state.redis_client = fake_redis
+
+    @app.get("/test-multi-rate-limit-unavailable")
+    def unavailable():
+        consume_rate_limits(fake_redis, rules=(RateLimitRule(_key(), 1, 60),))
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.get("/test-multi-rate-limit-unavailable")
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "service_unavailable"
+
+
+def test_multi_key_redis_failure_fails_closed(fake_redis):
+    fake_redis.available = False
+    rules = (
+        RateLimitRule(_key("multi-one"), 1, 60),
+        RateLimitRule(_key("multi-two"), 1, 60),
+    )
+
+    with pytest.raises(ServiceUnavailableError) as exc_info:
+        consume_rate_limits(fake_redis, rules=rules)
+
+    assert "test Redis unavailable" not in str(exc_info.value)
+
+
+@pytest.mark.parametrize("client", [None, ("not-an-ip", 1234)])
+def test_missing_or_invalid_direct_client_ip_fails_closed(client):
+    request = Request(
+        {
+            "type": "http",
+            "http_version": "1.1",
+            "method": "POST",
+            "scheme": "http",
+            "path": "/",
+            "raw_path": b"/",
+            "query_string": b"",
+            "headers": [],
+            "client": client,
+            "server": ("testserver", 80),
+        }
+    )
+
+    with pytest.raises(ServiceUnavailableError):
+        _client_ip(request)
 
 
 def test_missing_redis_fails_closed_without_local_fallback():

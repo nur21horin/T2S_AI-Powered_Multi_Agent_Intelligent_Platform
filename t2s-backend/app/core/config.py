@@ -33,6 +33,7 @@ class Settings(BaseSettings):
 
     # Authentication. Secrets remain masked in reprs and settings error output.
     jwt_secret_key: SecretStr | None = None
+    rate_limit_key_secret: SecretStr | None = None
     jwt_algorithm: str = "HS256"
     jwt_issuer: str = "t2s-backend"
     jwt_audience: str = "t2s-api"
@@ -89,6 +90,16 @@ class Settings(BaseSettings):
             raise ValueError("COOKIE_SAMESITE must be lax, strict, or none.")
         return normalized
 
+    @field_validator("rate_limit_key_secret")
+    @classmethod
+    def _valid_rate_limit_key_secret(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is None:
+            return None
+        secret = value.get_secret_value()
+        if not secret.strip() or len(secret.encode("utf-8")) < 32:
+            raise ValueError("RATE_LIMIT_KEY_SECRET must contain at least 32 bytes.")
+        return value
+
     @model_validator(mode="after")
     def _production_auth_secrets(self) -> "Settings":
         if self.is_production and (
@@ -96,6 +107,8 @@ class Settings(BaseSettings):
             or len(self.jwt_secret_key.get_secret_value().encode("utf-8")) < 32
         ):
             raise ValueError("JWT_SECRET_KEY must contain at least 32 bytes in production.")
+        if self.is_production and self.rate_limit_key_secret is None:
+            raise ValueError("RATE_LIMIT_KEY_SECRET must be configured in production.")
         return self
 
     @property

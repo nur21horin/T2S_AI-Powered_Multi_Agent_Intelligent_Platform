@@ -104,6 +104,7 @@ def test_redis_failure_prevents_database_revocation_and_retry_completes(
     refresh = db_client.cookies.get("t2s_refresh")
     csrf = login.json()["csrf_token"]
     store = db_client.app.state.redis_client
+    store.operations.clear()
     store.available = False
 
     failed = _logout(db_client, csrf, access)
@@ -205,6 +206,7 @@ def test_expired_or_invalid_access_token_does_not_block_refresh_logout(db_client
         now=datetime.now(UTC) - timedelta(minutes=30),
     )
     store = db_client.app.state.redis_client
+    store.operations.clear()
 
     expired_response = _logout(db_client, csrf, expired)
     assert expired_response.status_code == 200
@@ -227,6 +229,7 @@ def test_logout_handles_missing_access_and_refresh_tokens(db_client):
     refresh = login.cookies.get("t2s_refresh")
     csrf = login.json()["csrf_token"]
     store = db_client.app.state.redis_client
+    store.operations.clear()
 
     # Without the access token, logout revokes the presented refresh family only.
     no_access = _logout(db_client, csrf)
