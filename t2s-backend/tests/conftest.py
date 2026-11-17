@@ -1,8 +1,13 @@
 import os
 import time
+from collections.abc import Iterator
+from dataclasses import dataclass, field
 from pathlib import Path
+from uuid import uuid4
+from urllib.parse import urlsplit
 
 import pytest
+from redis import Redis
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
@@ -20,6 +25,151 @@ from app.main import create_app
 from tests.factories import FakeEmailSender
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
+TEST_REDIS_URL_ENV = "TEST_REDIS_URL"
+TEST_REDIS_OPT_IN_ENV = "TEST_REDIS_INTEGRATION"
+
+
+class RedisTestConfigurationError(ValueError):
+    """The configured Redis integration target is not safe to use for tests."""
+
+
+def _redis_endpoint_identity(url: str) -> tuple[str, int]:
+    """Return normalized hostname and port without exposing credentials."""
+    try:
+        parsed = urlsplit(url)
+        scheme = parsed.scheme.lower()
+        hostname = (parsed.hostname or "").lower().rstrip(".")
+        port = parsed.port or (6380 if scheme == "rediss" else 6379)
+    except ValueError:
+        raise RedisTestConfigurationError("Redis URL is malformed.") from None
+    if scheme not in {"redis", "rediss"} or not hostname:
+        raise RedisTestConfigurationError("Redis URL must use redis:// or rediss://.")
+    return hostname, port
+
+
+def _validate_test_redis_configuration(
+    test_url: str | None,
+    *,
+    opt_in: str | None,
+    known_application_urls: tuple[str, ...],
+) -> str | None:
+    """Validate opt-in and prevent targeting a known app Redis endpoint."""
+    if not test_url:
+        return None
+    if opt_in != "1":
+        raise RedisTestConfigurationError(
+            f"{TEST_REDIS_OPT_IN_ENV}=1 is required when {TEST_REDIS_URL_ENV} is set."
+        )
+    test_identity = _redis_endpoint_identity(test_url)
+    for app_url in known_application_urls:
+        if app_url and test_identity == _redis_endpoint_identity(app_url):
+            raise RedisTestConfigurationError(
+                f"{TEST_REDIS_URL_ENV} points to the same Redis endpoint as application REDIS_URL."
+            )
+    return test_url
+
+
+def _require_test_redis_url(test_url: str | None) -> str:
+    if not test_url:
+        pytest.skip(
+            f"Set {TEST_REDIS_URL_ENV} and {TEST_REDIS_OPT_IN_ENV}=1 "
+            "to run real Redis integration tests."
+        )
+    return test_url
+
+
+def _known_application_redis_urls() -> tuple[str, ...]:
+    """Read configured app Redis targets without ever using them as test targets."""
+    urls = []
+    process_url = os.environ.get("REDIS_URL")
+    if process_url:
+        urls.append(process_url)
+    env_file_url = None
+    env_file = BACKEND_ROOT / ".env"
+    if env_file.is_file():
+        try:
+            from app.core.config import Settings
+
+            configured = Settings(_env_file=env_file).redis_url
+            env_file_url = configured.get_secret_value() if configured else None
+        except Exception as exc:
+            raise RedisTestConfigurationError(
+                "Could not safely inspect the backend .env Redis configuration."
+            ) from exc
+    if env_file_url:
+        urls.append(env_file_url)
+    return tuple(urls)
+
+
+@dataclass
+class RedisTestScope:
+    """Real Redis client with explicit per-test key ownership and cleanup."""
+
+    client: Redis
+    namespace: str
+    _owned_keys: set[str] = field(default_factory=set)
+
+    def owned_key(self, suffix: str) -> str:
+        allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:_-"
+        if not suffix or any(char not in allowed for char in suffix):
+            raise ValueError("Redis test key suffix contains unsupported characters.")
+        key = f"{self.namespace}:{suffix}"
+        self._owned_keys.add(key)
+        return key
+
+    def cleanup(self) -> None:
+        errors: list[Exception] = []
+        try:
+            for key in self._owned_keys:
+                try:
+                    self.client.delete(key)
+                except Exception as exc:
+                    errors.append(exc)
+        finally:
+            self._owned_keys.clear()
+        if errors:
+            raise ExceptionGroup("Failed to clean up test-owned Redis keys.", errors)
+
+
+def _new_test_redis_namespace(client: Redis) -> RedisTestScope:
+    return RedisTestScope(client=client, namespace=f"t2s:test:{uuid4().hex}")
+
+
+@pytest.fixture
+def test_redis() -> Iterator[RedisTestScope]:
+    """Opt-in real Redis fixture; never falls back to application REDIS_URL."""
+    test_url = _require_test_redis_url(os.environ.get(TEST_REDIS_URL_ENV))
+    try:
+        validated_url = _validate_test_redis_configuration(
+            test_url,
+            opt_in=os.environ.get(TEST_REDIS_OPT_IN_ENV),
+            known_application_urls=_known_application_redis_urls(),
+        )
+    except RedisTestConfigurationError as exc:
+        pytest.fail(str(exc), pytrace=False)
+    assert validated_url is not None
+    client = Redis.from_url(
+        validated_url,
+        decode_responses=True,
+        socket_connect_timeout=1,
+        socket_timeout=1,
+    )
+    try:
+        client.ping()
+    except Exception as exc:
+        client.close()
+        pytest.fail(
+            f"Configured {TEST_REDIS_URL_ENV} is unreachable or failed PING ({type(exc).__name__}).",
+            pytrace=False,
+        )
+    scoped_client = _new_test_redis_namespace(client)
+    try:
+        yield scoped_client
+    finally:
+        try:
+            scoped_client.cleanup()
+        finally:
+            client.close()
 
 
 class FakeRedis:
