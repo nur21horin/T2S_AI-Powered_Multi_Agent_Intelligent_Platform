@@ -1,5 +1,6 @@
 import pytest
 
+from app.security.rate_limit import RATE_LIMIT_KEY_PREFIX, _KEY_PATTERN
 from tests.conftest import (
     RedisTestConfigurationError,
     RedisTestScope,
@@ -133,6 +134,25 @@ def test_cleanup_exception_group_preserves_original_errors():
 
     assert exc_info.value.exceptions == (original_error,)
     assert str(exc_info.value.exceptions[0]) == "test key deletion failed"
+
+
+def test_owned_rate_limit_key_is_unique_valid_and_registered():
+    client = RecordingRedis()
+    redis_scope = RedisTestScope(client=client, namespace="t2s:test:current")
+
+    first_key = redis_scope.owned_rate_limit_key()
+    second_key = redis_scope.owned_rate_limit_key()
+
+    assert first_key.startswith(RATE_LIMIT_KEY_PREFIX)
+    assert second_key.startswith(RATE_LIMIT_KEY_PREFIX)
+    assert _KEY_PATTERN.fullmatch(first_key)
+    assert _KEY_PATTERN.fullmatch(second_key)
+    assert first_key != second_key
+    assert redis_scope._owned_keys == {first_key, second_key}
+
+    redis_scope.cleanup()
+
+    assert set(client.deleted) == {first_key, second_key}
 
 
 def test_real_test_redis_connectivity(test_redis):

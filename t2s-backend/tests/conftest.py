@@ -22,6 +22,7 @@ from app.core.config import Settings
 from app.models.auth_token import AuthToken
 from app.models.user import User
 from app.main import create_app
+from app.security.rate_limit import RATE_LIMIT_KEY_PREFIX, _KEY_PATTERN, rate_limit_key
 from tests.factories import FakeEmailSender
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
@@ -114,6 +115,15 @@ class RedisTestScope:
         if not suffix or any(char not in allowed for char in suffix):
             raise ValueError("Redis test key suffix contains unsupported characters.")
         key = f"{self.namespace}:{suffix}"
+        self._owned_keys.add(key)
+        return key
+
+    def owned_rate_limit_key(self) -> str:
+        scope = f"test-{uuid4().hex}"
+        digest = uuid4().hex + uuid4().hex
+        key = rate_limit_key(scope, digest)
+        if not key.startswith(RATE_LIMIT_KEY_PREFIX) or not _KEY_PATTERN.fullmatch(key):
+            raise AssertionError("Generated rate-limit test key failed production validation.")
         self._owned_keys.add(key)
         return key
 
