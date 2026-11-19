@@ -57,6 +57,7 @@ def test_single_key_increments_and_reports_limit_remaining(test_redis):
 def test_single_key_increment_preserves_existing_window_expiry(test_redis):
     key = _owned_key(test_redis)
     assert test_redis.client.set(key, "4", px=5_000)
+    started = monotonic()
     ttl_before_ms = test_redis.client.pttl(key)
 
     result = consume_rate_limit(
@@ -64,10 +65,12 @@ def test_single_key_increment_preserves_existing_window_expiry(test_redis):
     )
 
     ttl_after_ms = test_redis.client.pttl(key)
+    elapsed_ms = (monotonic() - started) * 1000
     assert result.allowed
     assert result.remaining == 5
     assert test_redis.client.get(key) == "5"
-    assert 0 < ttl_after_ms <= ttl_before_ms <= 5_000
+    assert 0 < ttl_after_ms <= 5_000
+    assert abs((ttl_before_ms - ttl_after_ms) - elapsed_ms) <= 250
 
 
 def test_single_key_expired_counter_starts_new_window(test_redis):

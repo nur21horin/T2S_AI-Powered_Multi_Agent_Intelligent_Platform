@@ -30,9 +30,8 @@
   hashes, expire, and can only be consumed once.
 - Logout, password change, and reset revoke refresh tokens. Password changes
   and resets atomically increment the user's `auth_version`, invalidating all
-  previously issued access JWTs. Any future authorized role-change operation
-  must update the role and call `UserRepository.increment_auth_version` in the
-  same transaction; Step 3.1 adds no role modification operation.
+  previously issued access JWTs. The ADMIN-only role-assignment operation
+  updates the role and increments `auth_version` in one database transaction.
 - Logout accepts the current Bearer access token and stores only its `jti` in a
   Redis denylist. The key is namespaced and expires no later than the JWT. The
   Redis write happens before PostgreSQL refresh-family revocation. If Redis
@@ -60,19 +59,68 @@ once per application lifespan and closed during shutdown.
 Use Redis 6.2 or newer because denylist entries use the `SET ... PXAT` absolute
 expiration option.
 
+## Rate limiting
+
+Rate limits use the application-managed shared Redis client configured by
+`REDIS_URL`; there is no in-memory fallback. Protected rate-limited endpoints
+fail closed with HTTP 503 if Redis is missing, unavailable, times out, returns
+a script error, or returns a malformed script result. Rejected requests receive
+HTTP 429 with a `Retry-After` header. Email/IP/user identifiers are normalized,
+domain-separated and HMAC-SHA256 digested with the independently configured
+`RATE_LIMIT_KEY_SECRET` (minimum 32 bytes); raw identifiers are not put in Redis
+keys. Production requires this secret. Do not reuse the JWT signing secret.
+
+Current endpoint policies are:
+
+| Operation | Dimension | Limit |
+|---|---|---:|
+| Login | Direct client IP | 10 / 15 minutes |
+| Failed login credentials | Normalized account email | 5 / 15 minutes |
+| Registration | Direct client IP | 5 / hour |
+| Email verification | Direct client IP | 10 / hour |
+| Verification resend | Email and direct client IP | 3 / hour; 10 / hour |
+| Forgot password | Email and direct client IP | 3 / hour; 10 / hour |
+| Password reset | Direct client IP | 5 / hour |
+| Refresh | Direct client IP | 30 / minute |
+| Password change | Authenticated user UUID | 5 / 15 minutes |
+
+Multi-key operations preflight all policy and key state before normal counter
+writes, so invalid TTL and wrong-type state do not consume another dimension.
+Redis Lua does not roll back earlier writes after arbitrary later runtime or
+out-of-memory errors; no rollback guarantee is made for those failures.
+
+Only the ASGI peer address is used. Forwarded IP headers are ignored unless a
+future explicit trusted-proxy design is implemented. `/csrf`, `/me`, and
+logout have no rate-limit bucket. Successful login does not spend the failed
+account bucket; the IP login bucket applies to all login attempts.
+
+Real Redis tests are opt-in and require an isolated Redis service: configure
+`TEST_REDIS_URL` and explicitly set `TEST_REDIS_INTEGRATION=1`. Never point it
+to application `REDIS_URL`, production Redis, or shared development Redis.
+The pytest fixture reads both test variables from the process environment;
+putting them only in the backend `.env` file does not enable these tests.
+Tests use unique test-owned keys and delete only explicitly registered keys;
+they never flush a database or scan/delete by pattern. If `TEST_REDIS_URL` is
+absent, only tests requiring real Redis are skipped. A configured but unsafe or
+unreachable target fails tests. The minimum remains Redis 6.2+.
+
 ## Cookie and CSRF protections
 
 - Refresh tokens use an HttpOnly cookie. `Secure` is forced in production and
   when `SameSite=None` is selected. SameSite, cookie name, domain, and path are
   configurable. The default path is `/api/v1/auth`.
 - A separate signed CSRF cookie is paired with the `X-CSRF-Token` request
-  header. Refresh and logout require a valid pair and an exact `Origin` match in
-  `CORS_ALLOWED_ORIGINS`; SameSite is an additional browser control, not the
-  only CSRF defense.
-- Login also checks the request origin because it establishes the refresh
-  cookie. Browser clients must send credentials for refresh/logout and use the
-  CSRF token returned by login/refresh. After a page reload, obtain the current
-  CSRF token from `GET /api/v1/auth/csrf`.
+  header. Refresh and logout each require a valid pair and an exact `Origin`
+  match in `CORS_ALLOWED_ORIGINS`; refresh validates these before its rate
+  limit. Logout is not rate-limited. SameSite is an additional browser control,
+  not the only CSRF defense.
+- Login checks that the request has an allowed Origin because it establishes
+  the refresh cookie, but it does not require CSRF. `GET /api/v1/auth/csrf`
+  checks allowed Origin and the current valid refresh/CSRF cookie pair; it does
+  not require the CSRF header to return the token. Browser clients use
+  credentials for refresh/logout and send the CSRF token returned by
+  login/refresh. After a page reload, obtain the current token from the CSRF
+  endpoint.
 - Do not store access or refresh tokens in `localStorage`. Keep the access token
   in application memory and let the browser manage the HttpOnly refresh cookie.
 
@@ -87,12 +135,78 @@ expiration option.
   transport. SMTP credentials are optional and remain secret-valued settings.
 - Automated tests inject a fake sender and never send real messages.
 
-## Step 2 boundaries and remaining protections
+## Authorization and administrator operations
 
-Step 3.1 adds access-token version checks and Redis-backed individual token
-revocation. Centralized RBAC, role/permission dependencies, business-resource
-ownership/IDOR checks, general login and API rate limiting, security headers,
-and broader security-event audit coverage remain later Step 3 work. Login and
-email endpoints still require general rate limiting before production exposure.
+Authorization is default-deny. The existing STUDENT, TEACHER, ALUMNI, and
+ADMIN roles receive no implicit broad access. Only explicitly mapped
+permissions are granted; currently ADMIN has `admin.users.manage_roles`.
+Student/teacher/alumni access to future private resources must combine explicit
+role permission and an independent ownership check. ADMIN status does not
+silently bypass ownership. No unapproved domain CRUD endpoints are introduced.
+
+| Role | Explicit permissions currently implemented |
+|---|---|
+| STUDENT | None in the mounted API beyond authenticated self-service routes |
+| TEACHER | None in the mounted API |
+| ALUMNI | None in the mounted API |
+| ADMIN | `admin.users.manage_roles` |
+
+`PATCH /api/v1/admin/users/{user_id}/role` requires an authenticated active,
+verified ADMIN. An administrator cannot change their own role. A role update
+and `auth_version` increment commit atomically, invalidating old access tokens.
+Role changes are serialized using a PostgreSQL transaction advisory lock and
+emit structured events with actor/target IDs and old/new roles, never
+credentials. Bootstrap uses the same lock. The final active administrator
+cannot be demoted by concurrent role changes. Future deactivate/delete paths
+must use the same lock and guard; none currently exist.
+
+Bootstrap the first ADMIN by setting `ADMIN_BOOTSTRAP_ENABLED=true` and running
+`python -m scripts.create_admin` from the backend directory. The CLI prompts
+for email/name and twice for the password using hidden terminal input; it never
+accepts credentials as command-line arguments. It refuses if any ADMIN or the
+requested email already exists and never overwrites or promotes an account.
+Set `ADMIN_BOOTSTRAP_ENABLED=false` immediately after success. If the only
+administrator becomes inaccessible, the CLI cannot create a replacement.
+Recovery requires a maintenance-window database operator to restore an
+existing trusted account's ADMIN role and active status in one transaction,
+acquire the same PostgreSQL advisory transaction lock used by
+`UserRepository.lock_admin_state()`, increment `auth_version`, and record the
+intervention in the protected operational audit trail; then use normal
+password recovery. There is no public recovery endpoint or credential reset
+shortcut.
+
+## Audit events and response headers
+
+Privileged role assignments and initial administrator creation emit structured
+JSON audit events with event name, outcome, request ID when available, and safe
+actor/target identifiers and role values. Passwords, tokens, CSRF values, HMAC
+secrets, and request bodies are excluded. The existing access logger records
+method, path, status, duration, and request ID without query strings or request
+bodies, so authentication/authorization response statuses remain observable
+without logging credentials or submitted identifiers. There is no audit
+database table or migration. Responses receive `X-Content-Type-Options`, `X-Frame-Options`,
+`Referrer-Policy`, and `Permissions-Policy`, including errors and CORS
+preflights. The audit events use the application's JSON logger; deployment
+log collection and retention must route these events to a protected central
+sink. CORS accepts only configured origins; `Retry-After` is exposed.
+
+Run focused authorization and bootstrap checks from `t2s-backend/`:
+
+```powershell
+python -m pytest -q tests/unit/test_permissions.py tests/security/test_authorization_idor.py tests/security/test_admin_bootstrap.py tests/api/test_admin.py
+```
+
+For real Redis integration, start or provision a dedicated isolated Redis
+service (for example, a test-only instance on `127.0.0.1:6389`, with no shared
+application data). In PowerShell, set only the test target and explicit opt-in:
+
+```powershell
+$env:TEST_REDIS_URL = "redis://127.0.0.1:6389/0"
+$env:TEST_REDIS_INTEGRATION = "1"
+python -m pytest -q tests/integration/test_rate_limit_redis.py tests/integration/test_multi_rate_limit_redis.py tests/integration/test_rate_limit_concurrency.py
+```
+
+Do not set `TEST_REDIS_URL` to a production, shared development, or application
+Redis endpoint. Run the full backend suite with `python -m pytest -q`.
 
 See `API_CONTRACT_AUTH.md` for the frontend request and cookie contract.

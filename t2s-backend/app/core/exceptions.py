@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.logging import request_id_ctx
+from app.core.constants import SECURITY_RESPONSE_HEADERS
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,9 @@ def _error_response(status: int, code: str, message: str, details: Any = None,
                     headers: dict[str, str] | None = None) -> JSONResponse:
     body = {"error": {"code": code, "message": message, "details": details,
                       "request_id": request_id_ctx.get()}}
-    return JSONResponse(status_code=status, content=body, headers=headers)
+    response_headers = dict(SECURITY_RESPONSE_HEADERS)
+    response_headers.update(headers or {})
+    return JSONResponse(status_code=status, content=body, headers=response_headers)
 
 
 async def _app_exception_handler(_: Request, exc: AppException) -> JSONResponse:

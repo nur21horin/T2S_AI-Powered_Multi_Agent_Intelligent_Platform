@@ -31,5 +31,11 @@ def setup_logging(level: str = "INFO") -> None:
     root = logging.getLogger()
     root.handlers = [handler]
     root.setLevel(level.upper())
+    # Keep privileged audit events on the same structured root pipeline when
+    # logging is configured by a standalone CLI as well as by the ASGI app.
+    audit_logger = logging.getLogger("app.security.audit")
+    audit_logger.disabled = False
+    audit_logger.setLevel(root.level)
+    audit_logger.propagate = True
     # We emit our own access log line, so silence uvicorn's default one.
     logging.getLogger("uvicorn.access").disabled = True

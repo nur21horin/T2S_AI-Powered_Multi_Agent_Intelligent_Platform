@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     database_url: SecretStr | None = None
     test_database_url: SecretStr | None = None  # used by the test-suite only
     redis_url: SecretStr | None = None
+    admin_bootstrap_enabled: bool = False
     db_pool_size: int = 5
     db_max_overflow: int = 10
     db_pool_timeout: int = 30  # seconds to wait for a free pooled connection

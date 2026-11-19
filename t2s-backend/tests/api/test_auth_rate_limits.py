@@ -1,5 +1,10 @@
 from uuid import uuid4
 
+import pytest
+from redis.exceptions import ConnectionError as RedisConnectionError
+from redis.exceptions import ResponseError, TimeoutError as RedisTimeoutError
+
+from app.core.exceptions import ServiceUnavailableError
 
 WEB_ORIGIN = "http://localhost:3000"
 
@@ -209,3 +214,92 @@ def test_retry_after_is_cors_exposed(client):
 
     assert response.status_code == 200
     assert "retry-after" in response.headers["access-control-expose-headers"].lower()
+
+
+def test_refresh_rejections_do_not_consume_rate_limit(db_client):
+    email = f"refresh-order-{uuid4().hex}@example.com"
+    _register_and_verify(db_client, email)
+    login = db_client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": "correct-horse-battery-42"},
+        headers={"Origin": WEB_ORIGIN},
+    )
+    csrf = login.json()["csrf_token"]
+    redis_client = db_client.app.state.redis_client
+    before = redis_client.operations.count("redis:eval")
+
+    wrong_origin = db_client.post(
+        "/api/v1/auth/refresh",
+        headers={"Origin": "https://attacker.example", "X-CSRF-Token": csrf},
+    )
+    wrong_csrf = db_client.post(
+        "/api/v1/auth/refresh",
+        headers={"Origin": WEB_ORIGIN, "X-CSRF-Token": "invalid"},
+    )
+
+    assert wrong_origin.status_code == wrong_csrf.status_code == 403
+    assert redis_client.operations.count("redis:eval") == before
+
+
+def test_csrf_me_and_logout_have_no_rate_limit_bucket(db_client):
+    email = f"unlimited-auth-{uuid4().hex}@example.com"
+    _register_and_verify(db_client, email)
+    login = db_client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": "correct-horse-battery-42"},
+        headers={"Origin": WEB_ORIGIN},
+    )
+    access = login.json()["access_token"]
+    csrf = login.json()["csrf_token"]
+    before = db_client.app.state.redis_client.operations.count("redis:eval")
+
+    csrf_response = db_client.get("/api/v1/auth/csrf", headers={"Origin": WEB_ORIGIN})
+    me = db_client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {access}"})
+    logout = db_client.post(
+        "/api/v1/auth/logout",
+        headers={
+            "Origin": WEB_ORIGIN,
+            "X-CSRF-Token": csrf,
+            "Authorization": f"Bearer {access}",
+        },
+    )
+
+    assert csrf_response.status_code == me.status_code == logout.status_code == 200
+    assert db_client.app.state.redis_client.operations.count("redis:eval") == before
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        RedisConnectionError("redis.internal:6379 password=do-not-leak"),
+        RedisTimeoutError("private timeout details"),
+        ResponseError("script stack and key details"),
+        [0, -1],
+    ],
+    ids=["connection", "timeout", "command-error", "malformed-response"],
+)
+def test_auth_endpoint_rate_limit_failure_is_fail_closed_and_safe(db_client, monkeypatch, failure):
+    email = f"rate-failure-{uuid4().hex}@example.com"
+    redis_client = db_client.app.state.redis_client
+
+    def fail_eval(*_args):
+        if isinstance(failure, Exception):
+            raise failure
+        return failure
+
+    monkeypatch.setattr(redis_client, "eval", fail_eval)
+    response = db_client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": email,
+            "full_name": "Rate Failure Test",
+            "password": "valid-test-password-123",
+        },
+    )
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "service_unavailable"
+    assert "redis.internal" not in response.text
+    assert "password=do-not-leak" not in response.text
+    assert "script stack" not in response.text
+    assert email not in db_client.app.state.email_sender.verification_tokens

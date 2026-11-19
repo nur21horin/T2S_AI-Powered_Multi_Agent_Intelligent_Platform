@@ -65,3 +65,11 @@ def test_database_url_is_secret_in_repr():
     s = Settings(_env_file=None, database_url="postgresql+psycopg://u:TopSecret@h/db")
     assert "TopSecret" not in repr(s) and "TopSecret" not in str(s.model_dump())
     assert "TopSecret" in s.database_url.get_secret_value()
+
+
+def test_admin_bootstrap_is_disabled_by_default_and_can_be_explicitly_enabled(monkeypatch):
+    monkeypatch.delenv("ADMIN_BOOTSTRAP_ENABLED", raising=False)
+    assert Settings(_env_file=None).admin_bootstrap_enabled is False
+
+    monkeypatch.setenv("ADMIN_BOOTSTRAP_ENABLED", "true")
+    assert Settings(_env_file=None).admin_bootstrap_enabled is True

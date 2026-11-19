@@ -197,6 +197,32 @@ def test_csrf_endpoint_supports_frontend_reload(db_client):
     assert response.json()["csrf_token"] == csrf
 
 
+def test_login_requires_allowed_origin_but_not_csrf(db_client):
+    email = _register_and_verify(db_client)
+    operations_before = list(db_client.app.state.redis_client.operations)
+
+    rejected = db_client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": "correct-horse-battery-42"},
+        headers={"Origin": "https://attacker.example"},
+    )
+    accepted = _login(db_client, email)
+
+    assert rejected.status_code == 403
+    assert accepted.status_code == 200, accepted.text
+    # _login deliberately sends neither a CSRF header nor CSRF cookie.
+    assert "X-CSRF-Token" not in accepted.request.headers
+    assert len(db_client.app.state.redis_client.operations) > len(operations_before)
+
+
+def test_csrf_endpoint_rejects_unconfigured_origin_before_token_validation(db_client):
+    response = db_client.get(
+        "/api/v1/auth/csrf", headers={"Origin": "https://attacker.example"}
+    )
+
+    assert response.status_code == 403
+
+
 def test_password_recovery_is_generic_and_resets_password(db_client):
     email = _register_and_verify(db_client)
     old_access = _login(db_client, email).json()["access_token"]
