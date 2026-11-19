@@ -194,9 +194,14 @@ def test_auth_migration_upgrade_and_downgrade_on_isolated_test_schema(
                 )
                 command.upgrade(config, "head")
                 assert MigrationContext.configure(connection).get_current_revision() == (
-                    "8a6c2f17d4b0"
+                    "c4e7a1b2d903"
                 )
-                assert {"users", "auth_tokens"} <= set(inspect(connection).get_table_names())
+                assert {
+                    "users", "auth_tokens", "student_profiles", "teacher_profiles",
+                    "alumni_profiles", "skills", "interests", "user_skills",
+                    "user_interests", "technical_rooms", "room_memberships",
+                    "membership_requests",
+                } <= set(inspect(connection).get_table_names())
                 users_columns = {
                     column["name"] for column in inspect(connection).get_columns("users")
                 }

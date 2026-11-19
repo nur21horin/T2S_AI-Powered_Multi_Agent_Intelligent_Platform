@@ -11,13 +11,16 @@ from app.models.user import User
 
 class Permission(StrEnum):
     MANAGE_USER_ROLES = "admin.users.manage_roles"
+    MANAGE_OWN_PROFILE = "profile.manage_own"
+    CREATE_TECHNICAL_ROOM = "rooms.create"
+    VIEW_PUBLIC_ROOMS = "rooms.view_public"
 
 
 _ROLE_PERMISSIONS: dict[UserRole, frozenset[Permission]] = {
-    UserRole.STUDENT: frozenset(),
-    UserRole.TEACHER: frozenset(),
-    UserRole.ALUMNI: frozenset(),
-    UserRole.ADMIN: frozenset({Permission.MANAGE_USER_ROLES}),
+    UserRole.STUDENT: frozenset({Permission.MANAGE_OWN_PROFILE, Permission.CREATE_TECHNICAL_ROOM, Permission.VIEW_PUBLIC_ROOMS}),
+    UserRole.TEACHER: frozenset({Permission.MANAGE_OWN_PROFILE, Permission.CREATE_TECHNICAL_ROOM, Permission.VIEW_PUBLIC_ROOMS}),
+    UserRole.ALUMNI: frozenset({Permission.MANAGE_OWN_PROFILE, Permission.CREATE_TECHNICAL_ROOM, Permission.VIEW_PUBLIC_ROOMS}),
+    UserRole.ADMIN: frozenset({Permission.MANAGE_USER_ROLES, Permission.MANAGE_OWN_PROFILE, Permission.CREATE_TECHNICAL_ROOM, Permission.VIEW_PUBLIC_ROOMS}),
 }
 
 

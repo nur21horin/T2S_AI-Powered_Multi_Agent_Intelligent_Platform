@@ -7,6 +7,9 @@ import this package, which keeps metadata ownership one-way and avoids cycles.
 
 from app.models.auth_token import AuthToken
 from app.models.user import User
+from app.models.profile import AlumniProfile, StudentProfile, TeacherProfile
+from app.models.room import MembershipRequest, RoomMembership, TechnicalRoom
+from app.models.skill import Interest, Skill, UserInterest, UserSkill
 
 from app.models import (
     ai,
@@ -32,6 +35,16 @@ from app.models import (
 __all__ = [
     "AuthToken",
     "User",
+    "AlumniProfile",
+    "StudentProfile",
+    "TeacherProfile",
+    "Interest",
+    "Skill",
+    "UserInterest",
+    "UserSkill",
+    "MembershipRequest",
+    "RoomMembership",
+    "TechnicalRoom",
     "ai",
     "audit_log",
     "auth_token",

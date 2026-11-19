@@ -20,3 +20,19 @@ that version in the same transaction as refresh-token revocation. Individual
 logout revocation stores only the token `jti` in shared Redis until its expiry.
 Redis is a required runtime dependency for authenticated routes and for logout
 requests that revoke an access JWT; health endpoints do not depend on it.
+
+## Profiles, skills, and technical rooms
+
+Step 4 keeps account identity and role authority in `users` and stores
+role-specific data in one-to-one `student_profiles`, `teacher_profiles`, and
+`alumni_profiles` tables. `skills` and `interests` are normalized shared
+catalogs with user association tables. Catalog records cannot be deleted or
+globally edited through user APIs.
+
+`technical_rooms` owns visibility and room metadata. `room_memberships` is the
+separate access relationship, while `membership_requests` records the request
+lifecycle (`PENDING`, `APPROVED`, `REJECTED`, `CANCELLED`). Public discovery
+does not grant membership. Room ownership is assigned server-side and owner
+membership is created atomically with the room. Only owners may update/archive
+rooms or approve/reject requests; database constraints and row locking protect
+duplicate requests and concurrent approvals.

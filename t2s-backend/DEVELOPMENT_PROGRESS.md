@@ -1,6 +1,6 @@
 # DEVELOPMENT_PROGRESS.md
 
-**Current development step:** Master Step 3 — Security & Infrastructure (in progress)
+**Current development step:** Master Step 4 — Profile & Technical Room Management (implemented; Steps 5–8 pending)
 **Completed:** Phase 0 structure; 1.1 app skeleton, settings, JSON logging, request ID, access log, CORS, TrustedHost, centralized errors, and GET /api/v1/health; 1.2 SQLAlchemy engine/session, get_db, and GET /api/v1/health/ready (21 tests previously reported passing against PostgreSQL 16); 1.3 declarative base, metadata naming conventions, Alembic configuration/model discovery, and migration verification; Step 2 student registration, email verification, Argon2id password handling, login/logout, signed access JWT, opaque refresh-token rotation/revocation/reuse detection, current-user endpoint, password recovery/change, SMTP boundary, and refresh-cookie CSRF/origin protection; Step 3.1 database-backed access-token versioning, password-change/reset invalidation, Redis `jti` denylist, and idempotent Redis-before-PostgreSQL logout.
 **Step 3.1 verification:** Full backend suite: 62 passed, 1 non-failing Starlette/httpx deprecation warning. Migration tests upgraded and downgraded the new revision in an isolated PostgreSQL schema, verified an existing user survived with `auth_version=0`, and confirmed downgrade removed only the new column. Redis failure behavior and client lifecycle passed fake-client tests; no local Redis server or Docker was available for live-server integration.
 **Step 2 verification:** Full backend suite: 47 passed, 2 non-failing environment warnings. Migration tests generated a revision, and applied/downgraded both generated and committed auth migrations in isolated PostgreSQL schemas within transactions.
@@ -41,6 +41,25 @@ The mounted backend scope remains authentication/health plus administrator role 
 The backend full-suite command was `.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider -rs`: **157 passed, 16 skipped, 0 failed**. All 16 skips are the real-Redis integration tests because neither `TEST_REDIS_URL` nor explicit `TEST_REDIS_INTEGRATION=1` is configured. They were not redirected to `REDIS_URL`, and no Redis service was contacted. The standalone administrator bootstrap CLI now explicitly re-enables and routes its privileged audit logger through the configured JSON root handler; the actual CLI test verifies one success event and no false event after failure. To complete live-server verification, provision an isolated Redis 6.2+ test service and set those two test-only variables as described in `docs/SECURITY.md`.
 
 No migration was necessary: roles and `auth_version` already exist in the user schema; privileged audit events use the existing structured application logger. PostgreSQL integration verification used PostgreSQL 16.16. Ruff and mypy executables are not present in the checked-in virtual environment, so no optional lint/type checker was run. `git diff --check` passed.
+
+## Master Step 4 — Profile & Technical Room Management (2026-11-19)
+
+Implemented explicit one-to-one student, teacher, and alumni profiles;
+normalized shared skills and interests; technical rooms with public/private
+visibility; owner memberships; and transactional membership requests with
+PENDING, APPROVED, REJECTED, and CANCELLED states. Profile and room ownership
+are always derived from the authenticated user. Shared catalog deletion and
+room ownership transfer are intentionally not exposed.
+
+The new migration is `c4e7a1b2d903_add_profiles_skills_and_rooms.py`. The final
+Step 4 audit fixed room-bound request cancellation, membership reactivation
+after leave, archived-room decisions, nullable room update handling, and
+concurrent catalog creation rollback behavior. Full backend verification:
+**167 passed, 16 skipped, 0 failed**, with the existing Starlette/httpx
+deprecation and pytest cache-permission warnings. The 16 skips are opt-in
+real-Redis integration tests; no dedicated Redis service was available.
+PostgreSQL migration and API tests used PostgreSQL 16.16. Ruff and mypy are not
+installed in the checked-in virtual environment; `git diff --check` passed.
 
 ## Roadmap
 1 Foundation | 2 Authentication | 3 Authorization & Security | 4 Profiles | 5 Rooms | 6 Tasks |

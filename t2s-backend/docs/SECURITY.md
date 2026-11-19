@@ -203,10 +203,26 @@ application data). In PowerShell, set only the test target and explicit opt-in:
 ```powershell
 $env:TEST_REDIS_URL = "redis://127.0.0.1:6389/0"
 $env:TEST_REDIS_INTEGRATION = "1"
-python -m pytest -q tests/integration/test_rate_limit_redis.py tests/integration/test_multi_rate_limit_redis.py tests/integration/test_rate_limit_concurrency.py
+.\.venv\Scripts\python.exe -m pytest -q tests/integration/test_rate_limit_redis.py tests/integration/test_multi_rate_limit_redis.py tests/integration/test_rate_limit_concurrency.py
 ```
 
 Do not set `TEST_REDIS_URL` to a production, shared development, or application
-Redis endpoint. Run the full backend suite with `python -m pytest -q`.
+Redis endpoint. Run the full backend suite with `.\.venv\Scripts\python.exe -m pytest -q`.
 
 See `API_CONTRACT_AUTH.md` for the frontend request and cookie contract.
+
+## Profile and technical room authorization
+
+Profile writes are limited to the authenticated user's role-specific profile;
+role, account identity, and verification fields are not accepted as profile
+input. Skills and interests are normalized and associated through unique join
+constraints; users cannot delete shared catalog records.
+
+Room owners are assigned from the authenticated principal. Public visibility is
+only discoverability and never implies membership. Private rooms, member lists,
+and pending requests require the owner or an active member as appropriate.
+Only owners can update/archive rooms or approve/reject membership requests.
+Request state transitions are validated server-side, pending requests are
+unique per user and room, and approval creates membership and updates request
+state in one transaction. Owner membership cannot be removed through the leave
+operation, and ownership transfer is not implemented.

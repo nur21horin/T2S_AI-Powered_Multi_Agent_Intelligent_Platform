@@ -44,3 +44,10 @@ class User(TimestampMixin, Base):
         "AuthToken",
         back_populates="user", cascade="all, delete-orphan", passive_deletes=True
     )
+    student_profile: Mapped["StudentProfile | None"] = relationship(back_populates="user", uselist=False, cascade="all, delete-orphan")
+    teacher_profile: Mapped["TeacherProfile | None"] = relationship(back_populates="user", uselist=False, cascade="all, delete-orphan")
+    alumni_profile: Mapped["AlumniProfile | None"] = relationship(back_populates="user", uselist=False, cascade="all, delete-orphan")
+    skills: Mapped[list["UserSkill"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    interests: Mapped[list["UserInterest"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    owned_rooms: Mapped[list["TechnicalRoom"]] = relationship(back_populates="owner")
+    room_memberships: Mapped[list["RoomMembership"]] = relationship(back_populates="user", cascade="all, delete-orphan")
