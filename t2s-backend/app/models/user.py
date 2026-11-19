@@ -54,3 +54,5 @@ class User(TimestampMixin, Base):
     created_tasks: Mapped[list["Task"]] = relationship("Task", back_populates="creator")
     submissions: Mapped[list["Submission"]] = relationship("Submission", back_populates="user", cascade="all, delete-orphan")
     evaluations: Mapped[list["Evaluation"]] = relationship("Evaluation", back_populates="evaluator")
+    owned_projects: Mapped[list["Project"]] = relationship("Project", back_populates="owner")
+    owned_teams: Mapped[list["Team"]] = relationship("Team", back_populates="owner")

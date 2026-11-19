@@ -242,3 +242,8 @@ allow it. Evaluations are limited to room owners and active teacher members;
 self-evaluation, cross-user access, score-over-maximum, and client-controlled
 evaluator identity are rejected. Progress is calculated from database records
 and cannot be directly modified by clients.
+## Step 6 Phase 1 collaboration controls
+
+Project and team authorization is enforced in services rather than trusting client-supplied owner identifiers. Team owners and active delegated leaders manage team metadata, invitations, and join-request decisions; ordinary members cannot perform those actions. Owners cannot leave their own teams, and a leader cannot replace or transfer ownership. Join-request and invitation approval are row-locked and membership uniqueness is enforced by PostgreSQL partial indexes to prevent duplicate active memberships under concurrency.
+
+Public resources are discoverable but do not grant membership. Private project details require the owner or active team membership; private team details and member lists require active membership. Project association requires project ownership plus active membership in the selected team. Audit events contain bounded action names and UUIDs only; credentials, tokens, invitation contents, and request bodies are not logged.

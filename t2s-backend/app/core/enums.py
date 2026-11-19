@@ -54,3 +54,52 @@ class SubmissionStatus(StrEnum):
 class EvaluationStatus(StrEnum):
     FINALIZED = "FINALIZED"
     RETURNED = "RETURNED"
+
+
+class ProjectVisibility(StrEnum):
+    PUBLIC = "PUBLIC"
+    PRIVATE = "PRIVATE"
+
+
+class ProjectStatus(StrEnum):
+    DRAFT = "DRAFT"
+    ACTIVE = "ACTIVE"
+    COMPLETED = "COMPLETED"
+    ARCHIVED = "ARCHIVED"
+
+
+class TeamVisibility(StrEnum):
+    PUBLIC = "PUBLIC"
+    PRIVATE = "PRIVATE"
+
+
+class TeamStatus(StrEnum):
+    ACTIVE = "ACTIVE"
+    ARCHIVED = "ARCHIVED"
+
+
+class TeamMembershipRole(StrEnum):
+    OWNER = "OWNER"
+    LEADER = "LEADER"
+    MEMBER = "MEMBER"
+
+
+class TeamMembershipStatus(StrEnum):
+    ACTIVE = "ACTIVE"
+    LEFT = "LEFT"
+    REMOVED = "REMOVED"
+
+
+class InvitationStatus(StrEnum):
+    PENDING = "PENDING"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+    CANCELLED = "CANCELLED"
+    EXPIRED = "EXPIRED"
+
+
+class JoinRequestStatus(StrEnum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    WITHDRAWN = "WITHDRAWN"

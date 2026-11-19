@@ -67,3 +67,10 @@ The main Step 5 API routes are:
 - `GET /api/v1/submissions/{submission_id}`
 - `PUT/GET /api/v1/submissions/{submission_id}/evaluation`
 - `GET /api/v1/progress/me` and `GET /api/v1/progress/rooms/{room_id}/users/{user_id}`
+## Step 6 Phase 1: Projects, teams, and collaboration
+
+Projects are independent from technical rooms. A project has one owner and may be associated with at most one active team; a team may support multiple projects. Team creation atomically creates the owner membership. Team ownership is distinct from the optional delegated leader role, and ownership transfer is not implemented in Phase 1.
+
+Team membership is historical: active, left, and removed records are retained, with a database partial unique index allowing only one active membership per user/team and one active delegated leader per team. Invitations and join requests are separate state machines. Invitation expiry is checked during response; approval of a join request or invitation creates membership in the same transaction, while rejection never grants membership. Public visibility does not imply membership, and private team/project details are authorization-filtered.
+
+Phase 1 routes are registered under `/api/v1/projects` and `/api/v1/teams`. List routes use bounded page/limit pagination (1–100). Project-team association requires the project owner to be an active member of the target team, preventing unauthorized private-team attachment. Hackathons and project-hackathon registration remain Phase 2/3 work.

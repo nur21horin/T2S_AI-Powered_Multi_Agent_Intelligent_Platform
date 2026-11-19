@@ -13,6 +13,8 @@ from app.models.skill import Interest, Skill, UserInterest, UserSkill
 from app.models.task import Task
 from app.models.submission import Submission
 from app.models.evaluation import Evaluation
+from app.models.project import Project
+from app.models.team import Team, TeamMembership, TeamInvitation, TeamJoinRequest
 
 from app.models import (
     ai,
