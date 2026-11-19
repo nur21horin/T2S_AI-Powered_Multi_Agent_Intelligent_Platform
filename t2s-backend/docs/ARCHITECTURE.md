@@ -36,3 +36,34 @@ does not grant membership. Room ownership is assigned server-side and owner
 membership is created atomically with the room. Only owners may update/archive
 rooms or approve/reject requests; database constraints and row locking protect
 duplicate requests and concurrent approvals.
+
+## Tasks, submissions, evaluations, and progress
+
+Step 5 adds `tasks`, `submissions`, and `evaluations`. A task belongs to one
+technical room and one creator, and uses the lifecycle `DRAFT`, `PUBLISHED`,
+`CLOSED`, and `ARCHIVED`. Room owners and active teacher members may manage
+tasks. Public task visibility does not grant submission rights; submissions
+require active room membership.
+
+Each submission is an immutable attempt record for a user and task. The server
+assigns the attempt number and enforces the task's resubmission policy. No file
+storage is introduced; submissions contain text and optional HTTP(S) project or
+repository links. A submission has at most one current evaluation. Evaluators
+may finalize or return work, and students cannot evaluate their own submissions
+or change scores.
+
+Progress is calculated at read time from non-archived published/closed tasks,
+the student's latest attempt, and finalized evaluations. Completion percentage
+is completed eligible tasks divided by eligible tasks; returned evaluations are
+not completed. Client-supplied progress totals are never accepted.
+
+The main Step 5 API routes are:
+
+- `POST/GET /api/v1/rooms/{room_id}/tasks`
+- `GET/PATCH /api/v1/tasks/{task_id}`
+- `POST /api/v1/tasks/{task_id}/publish|close|archive`
+- `POST /api/v1/tasks/{task_id}/submissions`
+- `GET /api/v1/tasks/{task_id}/submissions|submissions/mine`
+- `GET /api/v1/submissions/{submission_id}`
+- `PUT/GET /api/v1/submissions/{submission_id}/evaluation`
+- `GET /api/v1/progress/me` and `GET /api/v1/progress/rooms/{room_id}/users/{user_id}`

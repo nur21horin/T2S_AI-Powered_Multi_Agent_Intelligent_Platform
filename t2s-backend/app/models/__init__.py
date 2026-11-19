@@ -10,6 +10,9 @@ from app.models.user import User
 from app.models.profile import AlumniProfile, StudentProfile, TeacherProfile
 from app.models.room import MembershipRequest, RoomMembership, TechnicalRoom
 from app.models.skill import Interest, Skill, UserInterest, UserSkill
+from app.models.task import Task
+from app.models.submission import Submission
+from app.models.evaluation import Evaluation
 
 from app.models import (
     ai,
@@ -45,6 +48,9 @@ __all__ = [
     "MembershipRequest",
     "RoomMembership",
     "TechnicalRoom",
+    "Task",
+    "Submission",
+    "Evaluation",
     "ai",
     "audit_log",
     "auth_token",

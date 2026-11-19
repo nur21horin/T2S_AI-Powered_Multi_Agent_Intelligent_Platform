@@ -27,6 +27,7 @@ class TechnicalRoom(TimestampMixin, Base):
     owner: Mapped["User"] = relationship("User", back_populates="owned_rooms")
     memberships: Mapped[list["RoomMembership"]] = relationship(back_populates="room", cascade="all, delete-orphan")
     requests: Mapped[list["MembershipRequest"]] = relationship(back_populates="room", cascade="all, delete-orphan")
+    tasks: Mapped[list["Task"]] = relationship("Task", back_populates="room", cascade="all, delete-orphan")
 
 
 class RoomMembership(TimestampMixin, Base):

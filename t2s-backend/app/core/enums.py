@@ -29,3 +29,28 @@ class MembershipRequestStatus(StrEnum):
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
     CANCELLED = "CANCELLED"
+
+
+class TaskDifficulty(StrEnum):
+    BEGINNER = "BEGINNER"
+    INTERMEDIATE = "INTERMEDIATE"
+    ADVANCED = "ADVANCED"
+
+
+class TaskStatus(StrEnum):
+    DRAFT = "DRAFT"
+    PUBLISHED = "PUBLISHED"
+    CLOSED = "CLOSED"
+    ARCHIVED = "ARCHIVED"
+
+
+class SubmissionStatus(StrEnum):
+    SUBMITTED = "SUBMITTED"
+    UNDER_REVIEW = "UNDER_REVIEW"
+    EVALUATED = "EVALUATED"
+    RETURNED = "RETURNED"
+
+
+class EvaluationStatus(StrEnum):
+    FINALIZED = "FINALIZED"
+    RETURNED = "RETURNED"

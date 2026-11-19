@@ -51,3 +51,6 @@ class User(TimestampMixin, Base):
     interests: Mapped[list["UserInterest"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     owned_rooms: Mapped[list["TechnicalRoom"]] = relationship(back_populates="owner")
     room_memberships: Mapped[list["RoomMembership"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    created_tasks: Mapped[list["Task"]] = relationship("Task", back_populates="creator")
+    submissions: Mapped[list["Submission"]] = relationship("Submission", back_populates="user", cascade="all, delete-orphan")
+    evaluations: Mapped[list["Evaluation"]] = relationship("Evaluation", back_populates="evaluator")

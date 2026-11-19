@@ -226,3 +226,19 @@ Request state transitions are validated server-side, pending requests are
 unique per user and room, and approval creates membership and updates request
 state in one transaction. Owner membership cannot be removed through the leave
 operation, and ownership transfer is not implemented.
+
+## Task and submission authorization
+
+Tasks are scoped to technical rooms. Room owners and active teacher members may
+create, edit, publish, close, or archive tasks. Draft tasks are hidden from
+ordinary room viewers. Public rooms may expose published task information, but
+submission creation requires an active room membership; private room and
+archived-room access is enforced server-side.
+
+Submission ownership, attempt numbers, status, and timestamps are assigned or
+validated by the service layer. Students may submit only to published tasks
+within the schedule and may resubmit only when the task policy and attempt limit
+allow it. Evaluations are limited to room owners and active teacher members;
+self-evaluation, cross-user access, score-over-maximum, and client-controlled
+evaluator identity are rejected. Progress is calculated from database records
+and cannot be directly modified by clients.

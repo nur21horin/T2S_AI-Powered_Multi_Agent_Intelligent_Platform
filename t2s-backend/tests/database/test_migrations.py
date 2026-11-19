@@ -194,13 +194,14 @@ def test_auth_migration_upgrade_and_downgrade_on_isolated_test_schema(
                 )
                 command.upgrade(config, "head")
                 assert MigrationContext.configure(connection).get_current_revision() == (
-                    "c4e7a1b2d903"
+                    "e5a1b2c3d4e5"
                 )
                 assert {
                     "users", "auth_tokens", "student_profiles", "teacher_profiles",
                     "alumni_profiles", "skills", "interests", "user_skills",
                     "user_interests", "technical_rooms", "room_memberships",
                     "membership_requests",
+                    "tasks", "submissions", "evaluations",
                 } <= set(inspect(connection).get_table_names())
                 users_columns = {
                     column["name"] for column in inspect(connection).get_columns("users")
@@ -215,6 +216,12 @@ def test_auth_migration_upgrade_and_downgrade_on_isolated_test_schema(
                     text("SELECT id FROM auth_tokens WHERE id = :id"),
                     {"id": existing_token_id},
                 ).scalar_one() == existing_token_id
+
+                command.downgrade(config, "c4e7a1b2d903")
+                assert MigrationContext.configure(connection).get_current_revision() == (
+                    "c4e7a1b2d903"
+                )
+                assert not {"tasks", "submissions", "evaluations"} & set(inspect(connection).get_table_names())
 
                 command.downgrade(config, "d713be9dc4b9")
                 assert MigrationContext.configure(connection).get_current_revision() == (

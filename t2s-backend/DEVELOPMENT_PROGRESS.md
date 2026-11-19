@@ -1,6 +1,6 @@
 # DEVELOPMENT_PROGRESS.md
 
-**Current development step:** Master Step 4 — Profile & Technical Room Management (implemented; Steps 5–8 pending)
+**Current development step:** Master Step 5 — Task, Submission, Evaluation & Progress Management (implemented; Steps 6–8 pending)
 **Completed:** Phase 0 structure; 1.1 app skeleton, settings, JSON logging, request ID, access log, CORS, TrustedHost, centralized errors, and GET /api/v1/health; 1.2 SQLAlchemy engine/session, get_db, and GET /api/v1/health/ready (21 tests previously reported passing against PostgreSQL 16); 1.3 declarative base, metadata naming conventions, Alembic configuration/model discovery, and migration verification; Step 2 student registration, email verification, Argon2id password handling, login/logout, signed access JWT, opaque refresh-token rotation/revocation/reuse detection, current-user endpoint, password recovery/change, SMTP boundary, and refresh-cookie CSRF/origin protection; Step 3.1 database-backed access-token versioning, password-change/reset invalidation, Redis `jti` denylist, and idempotent Redis-before-PostgreSQL logout.
 **Step 3.1 verification:** Full backend suite: 62 passed, 1 non-failing Starlette/httpx deprecation warning. Migration tests upgraded and downgraded the new revision in an isolated PostgreSQL schema, verified an existing user survived with `auth_version=0`, and confirmed downgrade removed only the new column. Redis failure behavior and client lifecycle passed fake-client tests; no local Redis server or Docker was available for live-server integration.
 **Step 2 verification:** Full backend suite: 47 passed, 2 non-failing environment warnings. Migration tests generated a revision, and applied/downgraded both generated and committed auth migrations in isolated PostgreSQL schemas within transactions.
@@ -60,6 +60,21 @@ deprecation and pytest cache-permission warnings. The 16 skips are opt-in
 real-Redis integration tests; no dedicated Redis service was available.
 PostgreSQL migration and API tests used PostgreSQL 16.16. Ruff and mypy are not
 installed in the checked-in virtual environment; `git diff --check` passed.
+
+## Master Step 5 — Task, Submission, Evaluation & Progress Management (2026-11-19)
+
+Implemented room-scoped task management, server-owned submission attempts,
+structured evaluations, and calculated personal/authorized progress summaries.
+The additive migration is `e5a1b2c3d4e5_add_tasks_submissions_evaluations.py`.
+Task lifecycle is `DRAFT`, `PUBLISHED`, `CLOSED`, `ARCHIVED`; submission status
+is derived from evaluation state, and progress uses the latest submission per
+task. Rubrics, file uploads, AI evaluation, and notifications remain outside
+Step 5 scope.
+
+Final Step 5 verification: **176 passed, 16 skipped, 0 failed**, with the
+existing Starlette/httpx deprecation warning. Focused Step 5 and migration
+tests passed **14 tests**. Ruff and mypy are not installed in the checked-in
+virtual environment; `git diff --check` and editor diagnostics passed.
 
 ## Roadmap
 1 Foundation | 2 Authentication | 3 Authorization & Security | 4 Profiles | 5 Rooms | 6 Tasks |
