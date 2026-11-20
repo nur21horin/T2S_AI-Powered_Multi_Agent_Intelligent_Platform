@@ -40,7 +40,14 @@ def test_docs_disabled_in_production():
     from app.core.config import Settings
     from app.main import create_app
     from fastapi.testclient import TestClient
+    from pydantic import SecretStr
 
-    s = Settings(_env_file=None, app_env="production", trusted_hosts=["testserver"])
+    s = Settings(
+        _env_file=None,
+        app_env="production",
+        trusted_hosts=["testserver"],
+        jwt_secret_key=SecretStr("production-test-secret-key-over-32-bytes-long"),
+        rate_limit_key_secret=SecretStr("unit-test-rate-limit-secret-with-32-bytes"),
+    )
     c = TestClient(create_app(s), raise_server_exceptions=False)
     assert c.get("/docs").status_code == 404

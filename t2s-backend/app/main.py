@@ -9,7 +9,9 @@ from app.core.lifespan import lifespan
 from app.core.logging import setup_logging
 from app.middleware.access_log import AccessLogMiddleware
 from app.middleware.request_id import RequestIDMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
 from app.schemas.common import ErrorResponse
+from app.services.email_service import SMTPEmailService
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -26,18 +28,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         responses={422: {"model": ErrorResponse}},
     )
     app.state.settings = settings
+    app.state.email_sender = SMTPEmailService(settings)
+    app.state.redis_client = None
     register_exception_handlers(app)
 
-    # add_middleware: last added is outermost. Order: RequestID > AccessLog > TrustedHost > CORS
+    # add_middleware: last added is outermost. Security headers wrap host/CORS responses.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_allowed_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "X-Request-ID"],
-        expose_headers=["X-Request-ID"],
+        expose_headers=["X-Request-ID", "Retry-After"],
     )
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(AccessLogMiddleware)
     app.add_middleware(RequestIDMiddleware)
 
