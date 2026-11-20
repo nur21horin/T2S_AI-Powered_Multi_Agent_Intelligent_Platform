@@ -14,6 +14,7 @@ from app.models.task import Task
 from app.models.submission import Submission
 from app.models.evaluation import Evaluation
 from app.models.hackathon import Hackathon, HackathonEligibleRole, HackathonRegistration, HackathonRegistrationMember
+from app.models.hackathon_submission import HackathonSubmission
 from app.models.project import Project
 from app.models.team import Team, TeamMembership, TeamInvitation, TeamJoinRequest
 
@@ -53,6 +54,7 @@ __all__ = [
     "TechnicalRoom",
     "Task",
     "Submission",
+    "HackathonSubmission",
     "Evaluation",
     "ai",
     "audit_log",

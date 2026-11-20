@@ -264,3 +264,25 @@ Capacity checks lock the hackathon row and count distinct users in pending and
 approved registrations, preventing overlapping individual/team registrations
 from bypassing the participant limit. Rejected and cancelled registrations do
 not reserve capacity.
+
+## Step 6 Phase 3 submission controls
+
+Submission authorization is resolved from the authenticated user, the existing
+project owner/team membership, and an approved hackathon registration. An
+individual registration cannot submit a team-attached project. A team
+registration cannot submit a project attached to another team, and only active
+members included in the approved registration snapshot may submit or access
+that team submission.
+
+The service locks the hackathon and submission rows during create, finalize,
+update, and withdrawal operations. A database uniqueness constraint prevents a
+project from being submitted more than once to the same hackathon, with
+integrity conflicts converted to the normal conflict response. Submissions are
+accepted only while the hackathon is open and before its start deadline; draft
+edits, finalization, and withdrawal re-check the current lifecycle and
+eligibility. Withdrawn submissions cannot be reused or transitioned.
+
+Hackathon submission listings are restricted to the organizer or an
+administrator. Participant detail access returns no resource for unauthorized
+IDs, and no submission content is written to audit logs; audit events contain
+only bounded action names and UUIDs.

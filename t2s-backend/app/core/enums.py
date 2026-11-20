@@ -135,3 +135,9 @@ class HackathonRegistrationStatus(StrEnum):
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
     CANCELLED = "CANCELLED"
+
+
+class HackathonSubmissionStatus(StrEnum):
+    DRAFT = "DRAFT"
+    SUBMITTED = "SUBMITTED"
+    WITHDRAWN = "WITHDRAWN"

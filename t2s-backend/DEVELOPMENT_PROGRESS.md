@@ -1,6 +1,6 @@
 # DEVELOPMENT_PROGRESS.md
 
-**Current development step:** Master Step 6 Phase 2 — Hackathon Management & Participation (implemented; later Step 6 phases and Steps 7–8 pending)
+**Current development step:** Master Step 6 Phase 3 — Project-Hackathon Integration & Submission Management (implemented; later Step 6 phases and Steps 7–8 pending)
 **Completed:** Phase 0 structure; 1.1 app skeleton, settings, JSON logging, request ID, access log, CORS, TrustedHost, centralized errors, and GET /api/v1/health; 1.2 SQLAlchemy engine/session, get_db, and GET /api/v1/health/ready (21 tests previously reported passing against PostgreSQL 16); 1.3 declarative base, metadata naming conventions, Alembic configuration/model discovery, and migration verification; Step 2 student registration, email verification, Argon2id password handling, login/logout, signed access JWT, opaque refresh-token rotation/revocation/reuse detection, current-user endpoint, password recovery/change, SMTP boundary, and refresh-cookie CSRF/origin protection; Step 3.1 database-backed access-token versioning, password-change/reset invalidation, Redis `jti` denylist, and idempotent Redis-before-PostgreSQL logout.
 **Step 3.1 verification:** Full backend suite: 62 passed, 1 non-failing Starlette/httpx deprecation warning. Migration tests upgraded and downgraded the new revision in an isolated PostgreSQL schema, verified an existing user survived with `auth_version=0`, and confirmed downgrade removed only the new column. Redis failure behavior and client lifecycle passed fake-client tests; no local Redis server or Docker was available for live-server integration.
 **Step 2 verification:** Full backend suite: 47 passed, 2 non-failing environment warnings. Migration tests generated a revision, and applied/downgraded both generated and committed auth migrations in isolated PostgreSQL schemas within transactions.
@@ -84,7 +84,7 @@ virtual environment; `git diff --check` and editor diagnostics passed.
 **Eight-phase roadmap mapping:** 15-step Step 2 implements the authentication portion of original Phase 3. Step 3.1 adds access-token revocation/versioning; later Step 3 substeps cover centralized authorization and broader application-security requirements.
 ## Master Step 6 Phase 1 — Projects, Teams & Collaboration
 
-Implemented and verified on the current `backend_dev` working tree. Added additive migrations `f6b3c4d5e6f7` and `f7c4d5e6f7a8`, project/team models and schemas, owner/leader authorization, historical memberships, invitations, join requests, project-team association, bounded pagination, API routes, audit events, and regression tests. Hackathon Management & Participation is implemented separately below; later Step 6 phases remain intentionally unimplemented.
+Implemented and verified on the current `backend_dev` working tree. Added additive migrations `f6b3c4d5e6f7` and `f7c4d5e6f7a8`, project/team models and schemas, owner/leader authorization, historical memberships, invitations, join requests, project-team association, bounded pagination, API routes, audit events, and regression tests. Hackathon Management & Participation and Project-Hackathon Integration are implemented separately below; later Step 6 phases remain intentionally unimplemented.
 
 Verification: focused project/team and migration tests: 8 passed, 1 warning. Full backend suite: 179 passed, 16 skipped, 1 warning. PostgreSQL 16.16 test database verified at migration head `f7c4d5e6f7a8`. Real Redis integration was not executed because `TEST_REDIS_INTEGRATION`/`TEST_REDIS_URL` were not configured and no Redis service was available. Ruff and mypy were unavailable in `.venv`; `git diff --check` passed after the final whitespace correction.
 
@@ -100,4 +100,14 @@ Private hackathons and registration details are actor-scoped. Organizers and adm
 
 Phase 2 API routes include `/api/v1/hackathons`, lifecycle actions under `/api/v1/hackathons/{hackathon_id}`, individual/team registration routes, organizer registration listing, participant `/me` routes, and registration review/cancellation routes under `/api/v1/hackathon-registrations`. The additive migrations are `g8d5e6f7a8b9_add_hackathons_and_registrations.py` and `h9e6f7a8b9c0_allow_historical_hackathon_organizer_deletion.py`; the current Phase 2 head is `h9e6f7a8b9c0`.
 
-Database-backed API and migration verification remains environment-dependent and was not run in the database-free correction validation. The focused lifecycle/update unit tests and full database-free unit suite pass; later project-hackathon integration and future Step 6 features remain outside this phase.
+Database-backed API and migration verification remains environment-dependent and was not run in the Phase 2 database-free correction validation. The focused lifecycle/update unit tests and full database-free unit suite pass; Phase 3 is documented and implemented below.
+
+## Master Step 6 Phase 3 — Project-Hackathon Integration & Submission Management
+
+Implemented project-to-hackathon submissions using the existing project, team, and approved registration records. Individual submissions require the authenticated owner of an active unassigned project and an approved individual registration. Team submissions require an active project team, an approved team registration for that same team, and the authenticated user to be an active member included in the registration snapshot.
+
+Hackathon submissions use the lifecycle `DRAFT` → `SUBMITTED` → `WITHDRAWN`, with draft withdrawal permitted and withdrawn submissions terminal. Submission creation, editing, finalization, and withdrawal are allowed only while the hackathon is `OPEN`, from the registration start through the hackathon start deadline. A project may be submitted at most once per hackathon, enforced by a database uniqueness constraint; concurrent creation is also handled as a conflict.
+
+Phase 3 routes are `/api/v1/hackathons/{hackathon_id}/submissions`, `/api/v1/hackathon-submissions/me`, `/api/v1/projects/{project_id}/hackathon-submissions`, and `/api/v1/hackathon-submissions/{submission_id}` with update, finalize, and withdraw actions. Hackathon submission listing is organizer/admin-only; participant reads require current project/team access and an approved registration. Submission metadata stores repository URL, demo URL, and additional details without duplicating the project entity.
+
+The additive migration is `i0j1k2l3m4n_add_hackathon_submissions.py`. Database-backed API and migration tests were not run during the database-free implementation validation.
