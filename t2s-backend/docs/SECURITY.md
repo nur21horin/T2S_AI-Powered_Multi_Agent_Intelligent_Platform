@@ -293,3 +293,18 @@ registration review is rejected after the hackathon leaves `OPEN`, and
 submission eligibility checks serialize with project, team, and hackathon row
 locks. These safeguards prevent related-resource changes from bypassing or
 invalidating submission authorization.
+
+## Step 7 opportunity controls
+
+Opportunity ownership is assigned from the authenticated alumni or administrator
+principal; client-supplied owner IDs are not accepted. Only owners and
+administrators can edit, publish, close, archive, or inspect an opportunity's
+applications. Published opportunities are visible to authenticated users,
+while draft, closed, and archived records are hidden from unrelated users.
+
+Applications are limited to one row per applicant and opportunity by a database
+uniqueness constraint. The service locks the opportunity and application during
+application and review mutations, rejects owner self-application, enforces
+published status and future deadlines, permits withdrawal only while pending,
+and permits owners or administrators to accept or reject only pending
+applications. Audit events contain bounded action names and UUIDs only.

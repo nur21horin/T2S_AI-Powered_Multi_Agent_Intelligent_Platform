@@ -17,6 +17,7 @@ from app.models.hackathon import Hackathon, HackathonEligibleRole, HackathonRegi
 from app.models.hackathon_submission import HackathonSubmission
 from app.models.project import Project
 from app.models.team import Team, TeamMembership, TeamInvitation, TeamJoinRequest
+from app.models.opportunity import Opportunity, OpportunityApplication
 
 from app.models import (
     ai,
@@ -55,6 +56,8 @@ __all__ = [
     "Task",
     "Submission",
     "HackathonSubmission",
+    "Opportunity",
+    "OpportunityApplication",
     "Evaluation",
     "ai",
     "audit_log",

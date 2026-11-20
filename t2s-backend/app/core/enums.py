@@ -141,3 +141,24 @@ class HackathonSubmissionStatus(StrEnum):
     DRAFT = "DRAFT"
     SUBMITTED = "SUBMITTED"
     WITHDRAWN = "WITHDRAWN"
+
+
+class OpportunityType(StrEnum):
+    JOB = "JOB"
+    INTERNSHIP = "INTERNSHIP"
+    RESEARCH = "RESEARCH"
+    MENTORSHIP = "MENTORSHIP"
+
+
+class OpportunityStatus(StrEnum):
+    DRAFT = "DRAFT"
+    PUBLISHED = "PUBLISHED"
+    CLOSED = "CLOSED"
+    ARCHIVED = "ARCHIVED"
+
+
+class OpportunityApplicationStatus(StrEnum):
+    PENDING = "PENDING"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+    WITHDRAWN = "WITHDRAWN"

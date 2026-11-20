@@ -92,3 +92,19 @@ The submission lifecycle is `DRAFT` -> `SUBMITTED` -> `WITHDRAWN`. The service p
 Individual submissions require an approved individual registration and an unassigned project owned by the submitter. Team submissions require an approved registration for the project's team and an active member present in that registration snapshot. Organizer/admin listing is separated from participant access, and participant reads require current ownership/team membership plus an approved registration. Hackathon, current-user, project, detail, update, finalize, and withdrawal routes are registered by `app/api/v1/endpoints/hackathon_submissions.py` under the `/api/v1` router.
 
 Phase 4 integrity guards lock project, team, and hackathon rows around dependent mutations. Projects and teams with submissions cannot be archived, and a submitted project's team association cannot be changed. Registration review is only valid while the hackathon is `OPEN`; cancellation of an approved registration with a submission is rejected.
+
+## Step 7: Alumni opportunities
+
+`Opportunity` stores an alumni/admin-owned posting and its lifecycle, type,
+organization, location, application URL, and optional timezone-aware deadline.
+`OpportunityApplication` stores one applicant's cover note and review state per
+opportunity. The service layer owns publication, closing, archival, deadline,
+ownership, and application state rules; the API layer remains thin and routes
+requests under `/api/v1/opportunities`.
+
+Published opportunities are visible to authenticated users. Draft, closed, and
+archived records are restricted to their owner or an administrator. Alumni and
+administrators may create and manage postings; applicants may apply once,
+withdraw pending applications, and reapply after withdrawal. Owners and
+administrators review applications. Row locks and a database uniqueness
+constraint protect concurrent lifecycle mutations and duplicate applications.
