@@ -1,6 +1,6 @@
 # DEVELOPMENT_PROGRESS.md
 
-**Current development step:** Master Step 7 — Alumni Opportunities (implemented; Notifications and later roadmap steps remain pending)
+**Current development step:** Master Step 8 — Notifications (implemented; AI integration and later roadmap steps remain pending)
 **Completed:** Phase 0 structure; 1.1 app skeleton, settings, JSON logging, request ID, access log, CORS, TrustedHost, centralized errors, and GET /api/v1/health; 1.2 SQLAlchemy engine/session, get_db, and GET /api/v1/health/ready (21 tests previously reported passing against PostgreSQL 16); 1.3 declarative base, metadata naming conventions, Alembic configuration/model discovery, and migration verification; Step 2 student registration, email verification, Argon2id password handling, login/logout, signed access JWT, opaque refresh-token rotation/revocation/reuse detection, current-user endpoint, password recovery/change, SMTP boundary, and refresh-cookie CSRF/origin protection; Step 3.1 database-backed access-token versioning, password-change/reset invalidation, Redis `jti` denylist, and idempotent Redis-before-PostgreSQL logout.
 **Step 3.1 verification:** Full backend suite: 62 passed, 1 non-failing Starlette/httpx deprecation warning. Migration tests upgraded and downgraded the new revision in an isolated PostgreSQL schema, verified an existing user survived with `auth_version=0`, and confirmed downgrade removed only the new column. Redis failure behavior and client lifecycle passed fake-client tests; no local Redis server or Docker was available for live-server integration.
 **Step 2 verification:** Full backend suite: 47 passed, 2 non-failing environment warnings. Migration tests generated a revision, and applied/downgraded both generated and committed auth migrations in isolated PostgreSQL schemas within transactions.
@@ -123,3 +123,9 @@ Implemented an authenticated opportunity board for alumni and administrators. Op
 Applicants can submit one application per opportunity, withdraw pending applications, and reapply after withdrawal. Opportunity owners and administrators can list applications and accept or reject pending applications. Ownership, publication state, deadline checks, duplicate application protection, row locking, and audit events are enforced by the service layer. The additive migration is `j1k2l3m4n5o_add_alumni_opportunities.py`; database-backed migration and API verification were not run during database-free validation.
 
 Step 7 routes are registered under `/api/v1/opportunities`, including CRUD/lifecycle endpoints, `/owned`, `/applications/me`, opportunity application listing, application review, and application withdrawal.
+
+## Master Step 8 — Notifications
+
+Implemented authenticated in-app notifications with recipient-scoped listing, unread-only filtering, unread counts, single-notification read marking, and mark-all-read support. Notifications are server-created only and currently cover opportunity application received and application reviewed events. Notification records retain the recipient, optional actor, notification type, message, optional opportunity reference, read timestamp, and audit-safe timestamps.
+
+The additive migration is `k2l3m4n5o6p_add_notifications.py`. Notification routes are registered under `/api/v1/notifications`; external email, push, websocket delivery, and background broker processing remain outside this step. Database-backed migration and API verification were not run during database-free validation.

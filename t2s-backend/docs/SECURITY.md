@@ -308,3 +308,13 @@ application and review mutations, rejects owner self-application, enforces
 published status and future deadlines, permits withdrawal only while pending,
 and permits owners or administrators to accept or reject only pending
 applications. Audit events contain bounded action names and UUIDs only.
+
+## Step 8 notification controls
+
+Notifications are created only by server-side services; there is no client
+endpoint for arbitrary notification creation. Every read, unread-count, and
+mark-read query is scoped to the authenticated recipient, preventing IDOR and
+sensitive cross-user disclosure. Single-notification reads use a row lock, and
+read-all updates are recipient-scoped. Opportunity application notifications
+are created in the same transaction as the related application mutation, and
+messages contain no cover-note or other sensitive application content.

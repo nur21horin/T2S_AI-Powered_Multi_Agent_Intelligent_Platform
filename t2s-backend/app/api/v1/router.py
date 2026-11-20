@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import admin, auth, evaluations, health, profiles, progress, rooms, submissions, tasks, projects, teams, hackathons, hackathon_submissions, opportunities
+from app.api.v1.endpoints import admin, auth, evaluations, health, profiles, progress, rooms, submissions, tasks, projects, teams, hackathons, hackathon_submissions, opportunities, notifications
 
 api_router = APIRouter()
 api_router.include_router(health.router)
@@ -18,3 +18,4 @@ api_router.include_router(hackathons.router)
 api_router.include_router(hackathons.registrations_router)
 api_router.include_router(hackathon_submissions.router)
 api_router.include_router(opportunities.router)
+api_router.include_router(notifications.router)

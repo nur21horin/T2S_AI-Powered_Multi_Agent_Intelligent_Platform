@@ -108,3 +108,17 @@ administrators may create and manage postings; applicants may apply once,
 withdraw pending applications, and reapply after withdrawal. Owners and
 administrators review applications. Row locks and a database uniqueness
 constraint protect concurrent lifecycle mutations and duplicate applications.
+
+## Step 8: Notifications
+
+`Notification` is a server-created in-app message addressed to one recipient,
+with an optional actor and opportunity reference, a typed event, message body,
+and nullable read timestamp. `NotificationService` owns recipient filtering,
+unread counts, and row-locked read mutations. Notification endpoints are thin
+and expose listing, unread counts, single read, and mark-all-read operations
+under `/api/v1/notifications`.
+
+Opportunity application creation and review create notifications in the same
+transaction as the state change. Clients cannot create notifications or read
+another user's notifications. External delivery channels are intentionally
+deferred to a later integration step.

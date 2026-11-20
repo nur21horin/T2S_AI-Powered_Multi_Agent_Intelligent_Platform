@@ -92,7 +92,7 @@ def test_application_review_only_accepts_terminal_review_states():
 def test_owner_can_accept_pending_application(monkeypatch):
     actor = _actor(UserRole.ALUMNI)
     opportunity = _opportunity(actor.id, OpportunityStatus.PUBLISHED)
-    application = SimpleNamespace(id=uuid4(), opportunity_id=opportunity.id, status=OpportunityApplicationStatus.PENDING, reviewed_at=None)
+    application = SimpleNamespace(id=uuid4(), opportunity_id=opportunity.id, applicant_id=uuid4(), status=OpportunityApplicationStatus.PENDING, reviewed_at=None)
     db = Mock()
     db.scalar.side_effect = [application, opportunity, application]
     monkeypatch.setattr(opportunity_service_module, "record_privileged_action", Mock())

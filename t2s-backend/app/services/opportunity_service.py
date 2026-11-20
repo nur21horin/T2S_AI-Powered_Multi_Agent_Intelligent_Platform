@@ -5,12 +5,13 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.enums import OpportunityApplicationStatus, OpportunityStatus, UserRole
+from app.core.enums import NotificationType, OpportunityApplicationStatus, OpportunityStatus, UserRole
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
 from app.models.opportunity import Opportunity, OpportunityApplication
 from app.models.user import User
 from app.schemas.opportunity import OpportunityApplicationCreate, OpportunityApplicationReview, OpportunityCreate, OpportunityUpdate
 from app.services.audit_service import record_privileged_action
+from app.services.notification_service import NotificationService
 from app.utils.pagination import Pagination
 
 
@@ -111,6 +112,14 @@ class OpportunityService:
             application.status = OpportunityApplicationStatus.PENDING
             application.cover_note = data.cover_note
             application.reviewed_at = None
+        NotificationService(self.db).create(
+            recipient_id=opportunity.owner_id,
+            actor_id=actor.id,
+            related_opportunity_id=opportunity.id,
+            notification_type=NotificationType.OPPORTUNITY_APPLICATION_RECEIVED,
+            title="New opportunity application",
+            body="A new application was submitted for your opportunity.",
+        )
         try:
             self.db.commit()
             self.db.refresh(application)
@@ -132,7 +141,7 @@ class OpportunityService:
         application = self.db.scalar(select(OpportunityApplication).where(OpportunityApplication.id == application_id))
         if application is None:
             raise NotFoundError("Application not found.")
-        self._managed(actor, application.opportunity_id)
+        opportunity = self._managed(actor, application.opportunity_id)
         application = self.db.scalar(select(OpportunityApplication).where(OpportunityApplication.id == application_id).with_for_update())
         if application is None:
             raise NotFoundError("Application not found.")
@@ -140,6 +149,14 @@ class OpportunityService:
             raise ConflictError("Only pending applications can be reviewed.")
         application.status = data.status
         application.reviewed_at = datetime.now(UTC)
+        NotificationService(self.db).create(
+            recipient_id=application.applicant_id,
+            actor_id=actor.id,
+            related_opportunity_id=opportunity.id,
+            notification_type=NotificationType.OPPORTUNITY_APPLICATION_REVIEWED,
+            title="Opportunity application reviewed",
+            body=f"Your opportunity application was {data.status.value.lower()}.",
+        )
         self.db.commit()
         self.db.refresh(application)
         record_privileged_action(action="opportunity_application_reviewed", actor_id=actor.id, target_id=application.id)
