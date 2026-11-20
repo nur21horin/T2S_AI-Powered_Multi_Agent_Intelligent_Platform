@@ -73,4 +73,12 @@ Projects are independent from technical rooms. A project has one owner and may b
 
 Team membership is historical: active, left, and removed records are retained, with a database partial unique index allowing only one active membership per user/team and one active delegated leader per team. Invitations and join requests are separate state machines. Invitation expiry is checked during response; approval of a join request or invitation creates membership in the same transaction, while rejection never grants membership. Public visibility does not imply membership, and private team/project details are authorization-filtered.
 
-Phase 1 routes are registered under `/api/v1/projects` and `/api/v1/teams`. List routes use bounded page/limit pagination (1–100). Project-team association requires the project owner to be an active member of the target team, preventing unauthorized private-team attachment. Hackathons and project-hackathon registration remain Phase 2/3 work.
+Phase 1 routes are registered under `/api/v1/projects` and `/api/v1/teams`. List routes use bounded page/limit pagination (1–100). Project-team association requires the project owner to be an active member of the target team, preventing unauthorized private-team attachment.
+
+## Step 6 Phase 2: Hackathon management and participation
+
+Hackathons are managed by `HackathonService`, with `Hackathon` holding lifecycle, schedule, visibility, participation mode, capacity, and team-size configuration. The lifecycle is linear: `DRAFT` -> `PUBLISHED` -> `OPEN` -> `CLOSED` -> `COMPLETED` -> `ARCHIVED`; archived records are terminal. The service owns organizer/admin authorization, date and team-size validation, bounded listing with status/participation filters, and lifecycle timestamps.
+
+Routes are registered under `/api/v1/hackathons` for CRUD, filtered lists, lifecycle actions, individual/team registration, participant registration views, and organizer registration lists. Registration review and participant-wide views are under `/api/v1/hackathon-registrations`. Registrations are `PENDING`, `APPROVED`, `REJECTED`, or `CANCELLED`; team registrations snapshot eligible active verified members and their roles.
+
+Capacity is enforced by locking the hackathon row and counting distinct users represented by pending and approved registration-member snapshots. Rejected and cancelled registrations do not reserve capacity, and a null participant limit means unlimited capacity. Private hackathons and registration details are actor-scoped: organizers/admins manage them, while participants see only their own pending/approved registration details.

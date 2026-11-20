@@ -22,6 +22,7 @@ from app.core.config import Settings
 from app.models.auth_token import AuthToken
 from app.models.user import User
 from app.models.room import TechnicalRoom
+from app.models.hackathon import Hackathon, HackathonRegistration
 from app.main import create_app
 from app.security.rate_limit import RATE_LIMIT_KEY_PREFIX, _KEY_PATTERN, rate_limit_key
 from tests.factories import FakeEmailSender
@@ -406,6 +407,9 @@ def db_client(test_database_url, migrated_test_database):
                     user_ids = select(User.id).where(User.email.in_(emails))
                     db.execute(delete(AuthToken).where(AuthToken.user_id.in_(user_ids)))
                     db.execute(delete(TechnicalRoom).where(TechnicalRoom.owner_id.in_(user_ids)))
+                    hackathon_ids = select(Hackathon.id).where(Hackathon.organizer_id.in_(user_ids))
+                    db.execute(delete(HackathonRegistration).where(HackathonRegistration.hackathon_id.in_(hackathon_ids)))
+                    db.execute(delete(Hackathon).where(Hackathon.organizer_id.in_(user_ids)))
                     db.execute(delete(User).where(User.email.in_(emails)))
             finally:
                 cleanup_engine.dispose()

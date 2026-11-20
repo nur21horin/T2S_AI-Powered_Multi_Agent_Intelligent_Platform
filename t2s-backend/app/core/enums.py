@@ -103,3 +103,35 @@ class JoinRequestStatus(StrEnum):
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
     WITHDRAWN = "WITHDRAWN"
+
+
+class HackathonStatus(StrEnum):
+    DRAFT = "DRAFT"
+    PUBLISHED = "PUBLISHED"
+    OPEN = "OPEN"
+    CLOSED = "CLOSED"
+    COMPLETED = "COMPLETED"
+    ARCHIVED = "ARCHIVED"
+
+
+class HackathonVisibility(StrEnum):
+    PUBLIC = "PUBLIC"
+    PRIVATE = "PRIVATE"
+
+
+class HackathonParticipationMode(StrEnum):
+    INDIVIDUAL = "INDIVIDUAL"
+    TEAM = "TEAM"
+    BOTH = "BOTH"
+
+
+class HackathonRegistrationType(StrEnum):
+    INDIVIDUAL = "INDIVIDUAL"
+    TEAM = "TEAM"
+
+
+class HackathonRegistrationStatus(StrEnum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    CANCELLED = "CANCELLED"

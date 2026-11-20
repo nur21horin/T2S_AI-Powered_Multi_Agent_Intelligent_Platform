@@ -247,3 +247,20 @@ and cannot be directly modified by clients.
 Project and team authorization is enforced in services rather than trusting client-supplied owner identifiers. Team owners and active delegated leaders manage team metadata, invitations, and join-request decisions; ordinary members cannot perform those actions. Owners cannot leave their own teams, and a leader cannot replace or transfer ownership. Join-request and invitation approval are row-locked and membership uniqueness is enforced by PostgreSQL partial indexes to prevent duplicate active memberships under concurrency.
 
 Public resources are discoverable but do not grant membership. Private project details require the owner or active team membership; private team details and member lists require active membership. Project association requires project ownership plus active membership in the selected team. Audit events contain bounded action names and UUIDs only; credentials, tokens, invitation contents, and request bodies are not logged.
+
+## Step 6 Phase 2 hackathon authorization
+
+Hackathon management is limited to the organizer or an administrator; lifecycle
+transitions and edits are validated by the service layer, and archived
+hackathons are terminal. Public visibility provides discovery only. Private
+hackathons and registration details are filtered by the authenticated actor.
+Participants can access their own registration details only while the
+registration is pending or approved; organizers and administrators can list
+and review registrations. Individual registration requires an eligible active
+verified user, while team registration requires an active team owner or
+delegated leader and snapshots only eligible active verified members.
+
+Capacity checks lock the hackathon row and count distinct users in pending and
+approved registrations, preventing overlapping individual/team registrations
+from bypassing the participant limit. Rejected and cancelled registrations do
+not reserve capacity.
