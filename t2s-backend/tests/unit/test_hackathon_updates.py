@@ -83,3 +83,14 @@ def test_persisted_date_validation_rejects_null_override_without_type_error(monk
         service._validate_persisted_dates(hackathon, {"start_at": None})
 
     db.commit.assert_not_called()
+
+
+def test_update_rejects_null_non_nullable_team_size(monkeypatch):
+    monkeypatch.setattr(hackathon_service_module, "record_privileged_action", Mock())
+    service, actor, hackathon, db = _service()
+
+    with pytest.raises(BadRequestError, match="team_size_min cannot be null"):
+        service.update(actor, hackathon.id, HackathonUpdate(team_size_min=None))
+
+    assert hackathon.team_size_min == 1
+    db.commit.assert_not_called()

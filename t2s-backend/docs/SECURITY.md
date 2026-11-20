@@ -286,3 +286,10 @@ Hackathon submission listings are restricted to the organizer or an
 administrator. Participant detail access returns no resource for unauthorized
 IDs, and no submission content is written to audit logs; audit events contain
 only bounded action names and UUIDs.
+
+The final Step 6 audit also protects dependent state transitions: project/team
+archival and project team reassignment are rejected when submissions exist,
+registration review is rejected after the hackathon leaves `OPEN`, and
+submission eligibility checks serialize with project, team, and hackathon row
+locks. These safeguards prevent related-resource changes from bypassing or
+invalidating submission authorization.

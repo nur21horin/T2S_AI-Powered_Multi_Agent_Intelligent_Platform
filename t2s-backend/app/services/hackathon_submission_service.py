@@ -167,7 +167,7 @@ class HackathonSubmissionService:
             if project.owner_id != actor.id:
                 raise ForbiddenError("Only the project owner can submit an individual project.")
             return None
-        team = self.db.get(Team, project.team_id)
+        team = self.db.scalar(select(Team).where(Team.id == project.team_id).with_for_update())
         if team is None or team.status != TeamStatus.ACTIVE:
             raise ConflictError("The project team is not active.")
         if self.db.scalar(select(TeamMembership.id).where(TeamMembership.team_id == project.team_id, TeamMembership.user_id == actor.id, TeamMembership.status == TeamMembershipStatus.ACTIVE)) is None:

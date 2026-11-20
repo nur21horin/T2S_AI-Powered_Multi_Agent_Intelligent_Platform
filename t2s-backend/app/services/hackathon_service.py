@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.enums import HackathonParticipationMode, HackathonRegistrationStatus, HackathonRegistrationType, HackathonStatus, HackathonVisibility, TeamMembershipRole, TeamMembershipStatus, TeamStatus, UserRole
 from app.core.exceptions import BadRequestError, ConflictError, ForbiddenError, NotFoundError
 from app.models.hackathon import Hackathon, HackathonEligibleRole, HackathonRegistration, HackathonRegistrationMember
+from app.models.hackathon_submission import HackathonSubmission
 from app.models.team import Team, TeamMembership
 from app.models.user import User
 from app.schemas.hackathon import HackathonCreate, HackathonUpdate
@@ -66,6 +67,9 @@ class HackathonService:
         if hackathon.status not in {HackathonStatus.DRAFT, HackathonStatus.PUBLISHED}:
             raise ConflictError("Only draft or published hackathons can be edited.")
         values = data.model_dump(exclude_unset=True)
+        for field in ("title", "visibility", "participation_mode", "team_size_min", "team_size_max", "eligible_roles"):
+            if field in values and values[field] is None:
+                raise BadRequestError(f"{field} cannot be null.")
         roles = values.pop("eligible_roles", None)
         if "title" in values:
             values["title"] = values["title"].strip()
@@ -164,23 +168,35 @@ class HackathonService:
     def cancel(self, actor: User, registration_id: UUID) -> HackathonRegistration:
         registration = self.db.scalar(select(HackathonRegistration).where(HackathonRegistration.id == registration_id).with_for_update())
         if registration is None: raise NotFoundError("Registration not found.")
-        hackathon = self.db.get(Hackathon, registration.hackathon_id)
+        hackathon = self.db.scalar(select(Hackathon).where(Hackathon.id == registration.hackathon_id).with_for_update())
         if hackathon is None: raise NotFoundError("Hackathon not found.")
         if not self._can_cancel(actor, registration, hackathon): raise ForbiddenError()
         if registration.status not in {HackathonRegistrationStatus.PENDING, HackathonRegistrationStatus.APPROVED}: raise ConflictError("Registration is no longer active.")
         if actor.role != UserRole.ADMIN and actor.id != hackathon.organizer_id and datetime.now(UTC) >= hackathon.start_at: raise ConflictError("Registration can no longer be cancelled.")
+        if registration.status == HackathonRegistrationStatus.APPROVED and self._has_submission(registration):
+            raise ConflictError("Registration cannot be cancelled while it has a hackathon submission.")
         registration.status = HackathonRegistrationStatus.CANCELLED
         registration.cancelled_at = datetime.now(UTC)
         self.db.commit(); self.db.refresh(registration)
         record_privileged_action(action="hackathon_registration_cancelled", actor_id=actor.id, target_id=registration.id)
         return registration
 
+    def _has_submission(self, registration: HackathonRegistration) -> bool:
+        query = select(HackathonSubmission.id).where(HackathonSubmission.hackathon_id == registration.hackathon_id)
+        if registration.registration_type == HackathonRegistrationType.INDIVIDUAL:
+            query = query.where(HackathonSubmission.submitter_id == registration.participant_id)
+        else:
+            query = query.where(HackathonSubmission.team_id == registration.team_id)
+        return self.db.scalar(query.limit(1)) is not None
+
     def review(self, actor: User, registration_id: UUID, approve: bool) -> HackathonRegistration:
         registration = self.db.scalar(select(HackathonRegistration).where(HackathonRegistration.id == registration_id).with_for_update())
         if registration is None: raise NotFoundError("Registration not found.")
-        hackathon = self.db.get(Hackathon, registration.hackathon_id)
+        hackathon = self.db.scalar(select(Hackathon).where(Hackathon.id == registration.hackathon_id).with_for_update())
         if hackathon is None: raise NotFoundError("Hackathon not found.")
         if not self._is_manager(actor, hackathon): raise ForbiddenError()
+        if hackathon.status != HackathonStatus.OPEN:
+            raise ConflictError("Registrations can only be reviewed while the hackathon is open.")
         if registration.status != HackathonRegistrationStatus.PENDING: raise ConflictError("Registration is no longer pending.")
         registration.status = HackathonRegistrationStatus.APPROVED if approve else HackathonRegistrationStatus.REJECTED
         registration.reviewed_by = actor.id; registration.reviewed_at = datetime.now(UTC)
@@ -260,6 +276,8 @@ class HackathonService:
         date_values = (start_at, end_at, registration_start_at, registration_end_at)
         if any(value is None for value in date_values):
             raise BadRequestError("Hackathon date fields cannot be null.")
+        if team_size_min is None or team_size_max is None:
+            raise BadRequestError("Hackathon team-size bounds cannot be null.")
         if any(value.tzinfo is None for value in date_values):
             raise BadRequestError("Hackathon date fields must include a timezone.")
         if end_at <= start_at or registration_end_at <= registration_start_at or registration_end_at > start_at or team_size_max < team_size_min:

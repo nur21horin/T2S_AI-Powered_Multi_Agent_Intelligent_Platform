@@ -111,3 +111,7 @@ Hackathon submissions use the lifecycle `DRAFT` → `SUBMITTED` → `WITHDRAWN`,
 Phase 3 routes are `/api/v1/hackathons/{hackathon_id}/submissions`, `/api/v1/hackathon-submissions/me`, `/api/v1/projects/{project_id}/hackathon-submissions`, and `/api/v1/hackathon-submissions/{submission_id}` with update, finalize, and withdraw actions. Hackathon submission listing is organizer/admin-only; participant reads require current project/team access and an approved registration. Submission metadata stores repository URL, demo URL, and additional details without duplicating the project entity.
 
 The additive migration is `i0j1k2l3m4n_add_hackathon_submissions.py`. Database-backed API and migration tests were not run during the database-free implementation validation.
+
+## Master Step 6 Phase 4 — Security, Integration & Final Backend Audit
+
+The final audit statically reviewed authentication dependencies, project/team ownership, hackathon registration and lifecycle rules, project-hackathon submissions, model relationships, migration ordering, transaction boundaries, and API exposure. Corrections prevent project/team archival or team reassignment when submissions depend on them, serialize team/hackathon eligibility checks with row locks, reject registration review after a hackathon leaves `OPEN`, and reject invalid nullable PATCH values. Database-free validation remains the source of truth for this audit; database-backed API and migration execution were intentionally skipped.

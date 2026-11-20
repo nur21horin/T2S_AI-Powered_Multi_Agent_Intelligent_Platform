@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.enums import InvitationStatus, JoinRequestStatus, TeamMembershipRole, TeamMembershipStatus, TeamStatus, TeamVisibility
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
 from app.models.team import Team, TeamInvitation, TeamJoinRequest, TeamMembership
+from app.models.hackathon_submission import HackathonSubmission
 from app.models.user import User
 from app.schemas.team import TeamCreate, TeamUpdate
 from app.services.audit_service import record_privileged_action
@@ -44,13 +45,15 @@ class TeamService:
         return list(self.db.scalars(query.order_by(Team.created_at.desc()).offset(page.offset).limit(page.limit)))
 
     def update(self, actor: User, team_id: UUID, data: TeamUpdate) -> Team:
-        team = self.db.get(Team, team_id)
+        team = self.db.scalar(select(Team).where(Team.id == team_id).with_for_update())
         if team is None or team.status == TeamStatus.ARCHIVED:
             raise NotFoundError("Team not found.")
         if not self._manager(actor.id, team):
             raise ForbiddenError()
         if data.status == TeamStatus.ARCHIVED and team.owner_id != actor.id:
             raise ForbiddenError("Only the team owner can archive the team.")
+        if data.status == TeamStatus.ARCHIVED and self._has_hackathon_submissions(team.id):
+            raise ConflictError("Teams with hackathon submissions cannot be archived.")
         for key, value in data.model_dump(exclude_unset=True).items():
             if key == "name" and value is not None:
                 value = value.strip()
@@ -61,11 +64,13 @@ class TeamService:
         return team
 
     def archive(self, actor: User, team_id: UUID) -> None:
-        team = self.db.get(Team, team_id)
+        team = self.db.scalar(select(Team).where(Team.id == team_id).with_for_update())
         if team is None:
             raise NotFoundError("Team not found.")
         if team.owner_id != actor.id:
             raise ForbiddenError()
+        if self._has_hackathon_submissions(team.id):
+            raise ConflictError("Teams with hackathon submissions cannot be archived.")
         team.status = TeamStatus.ARCHIVED
         self.db.commit()
         record_privileged_action(action="team_archived", actor_id=actor.id, target_id=team.id)
@@ -176,7 +181,7 @@ class TeamService:
         return self.db.scalar(select(TeamMembership.id).where(TeamMembership.team_id == team.id, TeamMembership.user_id == user_id, TeamMembership.role == TeamMembershipRole.LEADER, TeamMembership.status == TeamMembershipStatus.ACTIVE)) is not None
 
     def _managed_team(self, user_id: UUID, team_id: UUID) -> Team:
-        team = self.db.get(Team, team_id)
+        team = self.db.scalar(select(Team).where(Team.id == team_id).with_for_update())
         if team is None or team.status == TeamStatus.ARCHIVED: raise NotFoundError("Team not found.")
         if not self._manager(user_id, team): raise ForbiddenError()
         return team
@@ -186,3 +191,6 @@ class TeamService:
         self.db.add(membership)
         self.db.flush()
         return membership
+
+    def _has_hackathon_submissions(self, team_id: UUID) -> bool:
+        return self.db.scalar(select(HackathonSubmission.id).where(HackathonSubmission.team_id == team_id).limit(1)) is not None

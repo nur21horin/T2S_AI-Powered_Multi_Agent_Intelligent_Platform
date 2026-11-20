@@ -15,7 +15,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     uuid = postgresql.UUID(as_uuid=True)
-    submission_status = sa.Enum("DRAFT", "SUBMITTED", "WITHDRAWN", name="hackathon_submission_status", native_enum=False)
+    submission_status = sa.Enum("DRAFT", "SUBMITTED", "WITHDRAWN", name="hackathon_submission_status", native_enum=False, create_constraint=True)
 
     op.create_table(
         "hackathon_submissions",

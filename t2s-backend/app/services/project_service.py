@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.enums import ProjectStatus, ProjectVisibility, TeamMembershipRole, TeamMembershipStatus
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
 from app.models.project import Project
+from app.models.hackathon_submission import HackathonSubmission
 from app.models.team import Team, TeamMembership
 from app.models.user import User
 from app.schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
@@ -45,11 +46,13 @@ class ProjectService:
         return [self._safe_read(actor, project) for project in self.db.scalars(query.order_by(Project.created_at.desc()).offset(page.offset).limit(page.limit))]
 
     def update(self, actor: User, project_id: UUID, data: ProjectUpdate) -> Project:
-        project = self.db.get(Project, project_id)
+        project = self._locked_project(project_id)
         if project is None or project.status == ProjectStatus.ARCHIVED:
             raise NotFoundError("Project not found.")
         if project.owner_id != actor.id:
             raise ForbiddenError()
+        if data.status == ProjectStatus.ARCHIVED and self._has_hackathon_submissions(project.id):
+            raise ConflictError("Projects with hackathon submissions cannot be archived.")
         for key, value in data.model_dump(exclude_unset=True).items():
             if key == "title" and value is not None:
                 value = value.strip()
@@ -60,23 +63,27 @@ class ProjectService:
         return project
 
     def archive(self, actor: User, project_id: UUID) -> None:
-        project = self.db.get(Project, project_id)
+        project = self._locked_project(project_id)
         if project is None:
             raise NotFoundError("Project not found.")
         if project.owner_id != actor.id:
             raise ForbiddenError()
+        if self._has_hackathon_submissions(project.id):
+            raise ConflictError("Projects with hackathon submissions cannot be archived.")
         project.status = ProjectStatus.ARCHIVED
         self.db.commit()
         record_privileged_action(action="project_archived", actor_id=actor.id, target_id=project.id)
 
     def attach_team(self, actor: User, project_id: UUID, team_id: UUID | None) -> Project:
-        project = self.db.get(Project, project_id)
+        project = self._locked_project(project_id)
         if project is None or project.status == ProjectStatus.ARCHIVED:
             raise NotFoundError("Project not found.")
         if project.owner_id != actor.id:
             raise ForbiddenError()
+        if team_id != project.team_id and self._has_hackathon_submissions(project.id):
+            raise ConflictError("Projects with hackathon submissions cannot change team association.")
         if team_id is not None:
-            team = self.db.get(Team, team_id)
+            team = self.db.scalar(select(Team).where(Team.id == team_id).with_for_update())
             if team is None or team.status.value == "ARCHIVED":
                 raise NotFoundError("Team not found.")
             member = self.db.scalar(select(TeamMembership).where(TeamMembership.team_id == team_id, TeamMembership.user_id == actor.id, TeamMembership.status == TeamMembershipStatus.ACTIVE))
@@ -106,3 +113,12 @@ class ProjectService:
             if team is not None and team.visibility.value == "PRIVATE" and not self._can_view(actor, project):
                 result["team_id"] = None
         return result
+
+    def _has_hackathon_submissions(self, project_id: UUID) -> bool:
+        return self.db.scalar(select(HackathonSubmission.id).where(HackathonSubmission.project_id == project_id).limit(1)) is not None
+
+    def _locked_project(self, project_id: UUID) -> Project:
+        project = self.db.scalar(select(Project).where(Project.id == project_id).with_for_update())
+        if project is None or project.status == ProjectStatus.ARCHIVED:
+            raise NotFoundError("Project not found.")
+        return project

@@ -80,8 +80,7 @@ def test_team_submission_requires_active_team_membership():
     actor = SimpleNamespace(id=uuid4())
     project = SimpleNamespace(owner_id=uuid4(), team_id=uuid4(), status=ProjectStatus.ACTIVE)
     db = Mock()
-    db.get.return_value = SimpleNamespace(status=TeamStatus.ACTIVE)
-    db.scalar.return_value = None
+    db.scalar.side_effect = [SimpleNamespace(status=TeamStatus.ACTIVE), None]
     service = HackathonSubmissionService(db)
 
     with pytest.raises(ForbiddenError, match="active member"):
