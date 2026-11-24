@@ -41,7 +41,7 @@ export default function ProgressPage() {
   return (
     <div className="space-y-8">
       <div>
-        <p className="text-sm font-semibold text-cyan-300">
+        <p className="text-sm font-semibold text-teal-300">
           LEARNING ANALYTICS
         </p>
         <h1 className="mt-2 text-3xl font-bold">Progress Tracking</h1>
@@ -52,7 +52,7 @@ export default function ProgressPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { label: "Overall Progress", value: "62%", color: "text-cyan-300" },
+          { label: "Overall Progress", value: "62%", color: "text-teal-300" },
           { label: "Courses Enrolled", value: "04", color: "text-white" },
           { label: "Lessons Completed", value: "26", color: "text-green-400" },
           { label: "Learning Hours", value: "48h", color: "text-purple-400" },
@@ -77,11 +77,11 @@ export default function ProgressPage() {
 
         <div className="mt-5 h-4 overflow-hidden rounded-full bg-gray-700">
           <div
-            className="h-full rounded-full bg-cyan-400"
+            className="h-full rounded-full bg-teal-400"
             style={{ width: "62%" }}
           />
         </div>
-        <p className="mt-2 text-right text-sm text-cyan-300">62% completed</p>
+        <p className="mt-2 text-right text-sm text-teal-300">62% completed</p>
       </section>
 
       <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6">
@@ -96,7 +96,7 @@ export default function ProgressPage() {
           <select
             value={selectedCourse}
             onChange={(event) => setSelectedCourse(event.target.value)}
-            className="rounded-lg border border-white/10 bg-[#0c1120] px-4 py-2 text-white"
+            className="rounded-lg border border-white/10 bg-[#073b36] px-4 py-2 text-white"
           >
             <option>All Courses</option>
             <option>Frontend</option>
@@ -116,14 +116,14 @@ export default function ProgressPage() {
                     {course.category} · {course.completed}
                   </p>
                 </div>
-                <span className="font-semibold text-cyan-300">
+                <span className="font-semibold text-teal-300">
                   {course.progress}%
                 </span>
               </div>
 
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-700">
                 <div
-                  className="h-full rounded-full bg-cyan-400"
+                  className="h-full rounded-full bg-teal-400"
                   style={{ width: `${course.progress}%` }}
                 />
               </div>

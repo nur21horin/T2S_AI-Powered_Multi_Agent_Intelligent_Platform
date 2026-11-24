@@ -87,7 +87,7 @@ export default function ProfilePage() {
 
       {/* Page Heading */}
       <section>
-        <p className="text-sm font-medium text-cyan-300">
+        <p className="text-sm font-medium text-teal-300">
           STUDENT ACCOUNT
         </p>
 
@@ -105,7 +105,7 @@ export default function ProfilePage() {
       <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
 
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-violet-500/20 text-3xl font-bold text-violet-300">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/20 text-3xl font-bold text-emerald-300">
             {name.trim().charAt(0).toUpperCase() || "S"}
           </div>
 
@@ -118,17 +118,17 @@ export default function ProfilePage() {
               {department} · {university}
             </p>
 
-            <p className="mt-1 text-sm text-cyan-300">
+            <p className="mt-1 text-sm text-teal-300">
               {semester}
             </p>
           </div>
 
-          <div className="rounded-xl border border-violet-400/20 bg-violet-400/5 p-4">
+          <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 p-4">
             <p className="text-xs text-gray-400">
               PROFILE COMPLETION
             </p>
 
-            <p className="mt-2 text-2xl font-bold text-violet-300">
+            <p className="mt-2 text-2xl font-bold text-emerald-300">
               {profileProgress}%
             </p>
           </div>
@@ -136,7 +136,7 @@ export default function ProfilePage() {
 
         <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/10">
           <div
-            className="h-full rounded-full bg-violet-400 transition-all"
+            className="h-full rounded-full bg-emerald-400 transition-all"
             style={{ width: `${profileProgress}%` }}
           />
         </div>
@@ -164,7 +164,7 @@ export default function ProfilePage() {
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-[#0c1120] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+              className="w-full rounded-xl border border-white/10 bg-[#073b36] px-4 py-3 text-sm text-white outline-none focus:border-teal-400"
               placeholder="Enter your name"
             />
           </div>
@@ -178,7 +178,7 @@ export default function ProfilePage() {
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-[#0c1120] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+              className="w-full rounded-xl border border-white/10 bg-[#073b36] px-4 py-3 text-sm text-white outline-none focus:border-teal-400"
               placeholder="Enter your email"
             />
           </div>
@@ -191,7 +191,7 @@ export default function ProfilePage() {
             <input
               value={university}
               onChange={(event) => setUniversity(event.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-[#0c1120] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+              className="w-full rounded-xl border border-white/10 bg-[#073b36] px-4 py-3 text-sm text-white outline-none focus:border-teal-400"
             />
           </div>
 
@@ -203,7 +203,7 @@ export default function ProfilePage() {
             <input
               value={department}
               onChange={(event) => setDepartment(event.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-[#0c1120] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+              className="w-full rounded-xl border border-white/10 bg-[#073b36] px-4 py-3 text-sm text-white outline-none focus:border-teal-400"
             />
           </div>
 
@@ -215,7 +215,7 @@ export default function ProfilePage() {
             <input
               value={semester}
               onChange={(event) => setSemester(event.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-[#0c1120] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+              className="w-full rounded-xl border border-white/10 bg-[#073b36] px-4 py-3 text-sm text-white outline-none focus:border-teal-400"
             />
           </div>
 
@@ -230,7 +230,7 @@ export default function ProfilePage() {
             value={bio}
             onChange={(event) => setBio(event.target.value)}
             rows={4}
-            className="w-full resize-y rounded-xl border border-white/10 bg-[#0c1120] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+            className="w-full resize-y rounded-xl border border-white/10 bg-[#073b36] px-4 py-3 text-sm text-white outline-none focus:border-teal-400"
             placeholder="Write something about yourself..."
           />
         </div>
@@ -257,13 +257,13 @@ export default function ProfilePage() {
               }
             }}
             placeholder="Example: Python"
-            className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#0c1120] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+            className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#073b36] px-4 py-3 text-sm text-white outline-none focus:border-teal-400"
           />
 
           <button
             type="button"
             onClick={addSkill}
-            className="rounded-xl bg-violet-500 px-5 py-3 text-sm font-medium text-white hover:bg-violet-600"
+            className="rounded-xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white hover:bg-emerald-600"
           >
             + Add Skill
           </button>
@@ -273,7 +273,7 @@ export default function ProfilePage() {
           {skills.map((skill) => (
             <span
               key={skill}
-              className="flex items-center gap-2 rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm text-cyan-300"
+              className="flex items-center gap-2 rounded-xl border border-teal-400/20 bg-teal-400/10 px-4 py-2 text-sm text-teal-300"
             >
               {skill}
 
@@ -311,13 +311,13 @@ export default function ProfilePage() {
               }
             }}
             placeholder="Example: Data Science"
-            className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#0c1120] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400"
+            className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#073b36] px-4 py-3 text-sm text-white outline-none focus:border-teal-400"
           />
 
           <button
             type="button"
             onClick={addInterest}
-            className="rounded-xl bg-violet-500 px-5 py-3 text-sm font-medium text-white hover:bg-violet-600"
+            className="rounded-xl bg-emerald-500 px-5 py-3 text-sm font-medium text-white hover:bg-emerald-600"
           >
             + Add Interest
           </button>
@@ -327,7 +327,7 @@ export default function ProfilePage() {
           {interests.map((interest) => (
             <span
               key={interest}
-              className="flex items-center gap-2 rounded-xl border border-violet-400/20 bg-violet-400/10 px-4 py-2 text-sm text-violet-300"
+              className="flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm text-emerald-300"
             >
               {interest}
 
@@ -349,13 +349,13 @@ export default function ProfilePage() {
         <button
           type="button"
           onClick={saveProfile}
-          className="rounded-xl bg-cyan-500 px-8 py-3 font-semibold text-white transition hover:bg-cyan-600"
+          className="rounded-xl bg-teal-500 px-8 py-3 font-semibold text-white transition hover:bg-teal-600"
         >
           Save Changes
         </button>
 
         {message && (
-          <p className="text-sm text-cyan-300" role="status">
+          <p className="text-sm text-teal-300" role="status">
             {message}
           </p>
         )}

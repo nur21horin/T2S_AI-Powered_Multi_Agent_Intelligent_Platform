@@ -94,7 +94,7 @@ export default function CareerPage() {
     <div className="space-y-8">
       {/* Heading */}
       <section>
-        <p className="text-sm font-medium text-cyan-300">
+        <p className="text-sm font-medium text-teal-300">
           CAREER DEVELOPMENT
         </p>
 
@@ -135,7 +135,7 @@ export default function CareerPage() {
             onClick={() => setActiveTab(tab)}
             className={`rounded-xl px-4 py-2 text-sm transition ${
               activeTab === tab
-                ? "bg-violet-500 text-white"
+                ? "bg-emerald-500 text-white"
                 : "border border-white/10 text-gray-400 hover:text-white"
             }`}
           >
@@ -161,10 +161,10 @@ export default function CareerPage() {
               return (
                 <article
                   key={career.id}
-                  className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 hover:border-violet-400/40"
+                  className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 hover:border-emerald-400/40"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="rounded-full bg-violet-400/10 px-3 py-1 text-xs text-violet-300">
+                    <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">
                       {career.category}
                     </span>
                     <span className="text-xs text-gray-400">
@@ -189,7 +189,7 @@ export default function CareerPage() {
                       {career.skills.map((skill) => (
                         <span
                           key={skill}
-                          className="rounded-lg border border-white/10 bg-[#0c1120] px-3 py-2 text-xs text-gray-300"
+                          className="rounded-lg border border-white/10 bg-[#073b36] px-3 py-2 text-xs text-gray-300"
                         >
                           {skill}
                         </span>
@@ -202,12 +202,12 @@ export default function CareerPage() {
                       <span className="text-gray-400">
                         Example skill match
                       </span>
-                      <span className="text-cyan-300">{career.match}%</span>
+                      <span className="text-teal-300">{career.match}%</span>
                     </div>
 
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
                       <div
-                        className="h-full rounded-full bg-cyan-400"
+                        className="h-full rounded-full bg-teal-400"
                         style={{ width: `${career.match}%` }}
                       />
                     </div>
@@ -218,8 +218,8 @@ export default function CareerPage() {
                     onClick={() => toggleCareer(career.id)}
                     className={`mt-5 w-full rounded-xl border px-4 py-3 text-sm transition ${
                       isSaved
-                        ? "border-cyan-400/30 bg-cyan-400/10 text-cyan-300"
-                        : "border-white/10 bg-white/[0.04] text-gray-300 hover:border-violet-400/40"
+                        ? "border-teal-400/30 bg-teal-400/10 text-teal-300"
+                        : "border-white/10 bg-white/[0.04] text-gray-300 hover:border-emerald-400/40"
                     }`}
                   >
                     {isSaved ? "Saved ✓" : "Save Career Path"}
@@ -250,7 +250,7 @@ export default function CareerPage() {
                 className="rounded-2xl border border-white/10 bg-white/[0.035] p-5"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs text-cyan-300">
+                  <span className="rounded-full bg-teal-400/10 px-3 py-1 text-xs text-teal-300">
                     {opportunity.type}
                   </span>
                   <span className="text-xs text-gray-500">
@@ -273,7 +273,7 @@ export default function CareerPage() {
                 <button
                   type="button"
                   onClick={() => toggleOpportunity(opportunity.id)}
-                  className="mt-5 rounded-xl border border-white/10 px-4 py-3 text-sm text-gray-300 hover:border-cyan-400/40"
+                  className="mt-5 rounded-xl border border-white/10 px-4 py-3 text-sm text-gray-300 hover:border-teal-400/40"
                 >
                   {isSaved ? "Saved ✓" : "Save Opportunity"}
                 </button>

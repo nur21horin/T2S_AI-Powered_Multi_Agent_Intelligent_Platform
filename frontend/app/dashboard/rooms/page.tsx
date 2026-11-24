@@ -13,7 +13,7 @@ const rooms = [
     teacher: "AI Faculty",
     members: 45,
     level: "Intermediate",
-    color: "violet",
+    color: "emerald",
   },
   {
     id: 2,
@@ -24,7 +24,7 @@ const rooms = [
     teacher: "ML Faculty",
     members: 38,
     level: "Intermediate",
-    color: "cyan",
+    color: "teal",
   },
   {
     id: 3,
@@ -95,7 +95,7 @@ export default function RoomsPage() {
 
       {/* Page heading */}
       <section>
-        <p className="text-sm font-medium text-violet-300">
+        <p className="text-sm font-medium text-emerald-300">
           LEARNING COMMUNITIES
         </p>
 
@@ -128,7 +128,7 @@ export default function RoomsPage() {
 
         <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
           <p className="text-sm text-gray-400">My Requests</p>
-          <h2 className="mt-3 text-3xl font-bold text-violet-300">
+          <h2 className="mt-3 text-3xl font-bold text-emerald-300">
             {requests.length.toString().padStart(2, "0")}
           </h2>
         </div>
@@ -150,7 +150,7 @@ export default function RoomsPage() {
           placeholder="Search AI, Web Development, Data Science..."
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          className="w-full rounded-xl border border-white/10 bg-[#0c1120] px-4 py-3 text-sm text-white outline-none transition placeholder:text-gray-500 focus:border-violet-400"
+          className="w-full rounded-xl border border-white/10 bg-[#073b36] px-4 py-3 text-sm text-white outline-none transition placeholder:text-gray-500 focus:border-emerald-400"
         />
       </section>
 
@@ -181,12 +181,12 @@ export default function RoomsPage() {
             return (
               <div
                 key={room.id}
-                className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition hover:border-violet-400/40"
+                className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition hover:border-emerald-400/40"
               >
 
                 <div className="flex items-center justify-between">
 
-                  <span className="rounded-full bg-violet-400/10 px-3 py-1 text-xs text-violet-300">
+                  <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">
                     {room.category}
                   </span>
 
@@ -228,7 +228,7 @@ export default function RoomsPage() {
                   className={`mt-5 w-full rounded-xl px-4 py-3 text-sm font-medium transition ${
                     requested
                       ? "border border-green-400/30 bg-green-400/10 text-green-300"
-                      : "bg-violet-500 text-white hover:bg-violet-600"
+                      : "bg-emerald-500 text-white hover:bg-emerald-600"
                   }`}
                 >
                   {requested ? "Request Sent ✓" : "Request to Join →"}

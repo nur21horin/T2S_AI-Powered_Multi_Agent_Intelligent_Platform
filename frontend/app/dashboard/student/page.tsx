@@ -11,7 +11,7 @@ export default function StudentDashboard() {
   return (
     <div className="space-y-8">
       <section>
-        <p className="text-sm font-medium text-cyan-300">
+        <p className="text-sm font-medium text-teal-300">
           STUDENT WORKSPACE
         </p>
         <h1 className="mt-2 text-3xl font-bold">My learning dashboard</h1>
@@ -42,17 +42,17 @@ export default function StudentDashboard() {
           ].map((course) => (
             <div
               key={course.title}
-              className="rounded-xl border border-white/5 bg-[#0c1120] p-4"
+              className="rounded-xl border border-white/5 bg-[#073b36] p-4"
             >
               <div className="flex justify-between gap-3">
                 <span className="font-medium">{course.title}</span>
-                <span className="text-sm text-cyan-300">
+                <span className="text-sm text-teal-300">
                   {course.progress}
                 </span>
               </div>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
                 <div
-                  className="h-full rounded-full bg-cyan-400"
+                  className="h-full rounded-full bg-teal-400"
                   style={{ width: course.progress }}
                 />
               </div>
@@ -64,7 +64,7 @@ export default function StudentDashboard() {
       <div className="grid gap-4 sm:grid-cols-2">
         <Link
           href="/dashboard/tasks"
-          className="rounded-2xl border border-white/10 p-5 transition hover:border-cyan-400/50"
+          className="rounded-2xl border border-white/10 p-5 transition hover:border-teal-400/50"
         >
           <h2 className="font-semibold">My tasks →</h2>
           <p className="mt-2 text-sm text-gray-400">
@@ -74,7 +74,7 @@ export default function StudentDashboard() {
 
         <Link
           href="/dashboard/knowledge"
-          className="rounded-2xl border border-white/10 p-5 transition hover:border-cyan-400/50"
+          className="rounded-2xl border border-white/10 p-5 transition hover:border-teal-400/50"
         >
           <h2 className="font-semibold">Knowledge Hub →</h2>
           <p className="mt-2 text-sm text-gray-400">

@@ -100,7 +100,7 @@ export default function KnowledgePage() {
 
       {/* Heading */}
       <section>
-        <p className="text-sm font-medium text-cyan-300">
+        <p className="text-sm font-medium text-teal-300">
           LEARNING RESOURCES
         </p>
 
@@ -148,7 +148,7 @@ export default function KnowledgePage() {
           placeholder="Search courses, books, tutorials..."
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          className="w-full rounded-xl border border-white/10 bg-[#0c1120] px-4 py-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-cyan-400"
+          className="w-full rounded-xl border border-white/10 bg-[#073b36] px-4 py-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-teal-400"
         />
       </section>
 
@@ -166,8 +166,8 @@ export default function KnowledgePage() {
               onClick={() => setCategory(item)}
               className={`rounded-full px-4 py-2 text-xs transition ${
                 category === item
-                  ? "bg-cyan-500 text-white"
-                  : "border border-white/10 bg-white/[0.035] text-gray-400 hover:border-cyan-400/40 hover:text-white"
+                  ? "bg-teal-500 text-white"
+                  : "border border-white/10 bg-white/[0.035] text-gray-400 hover:border-teal-400/40 hover:text-white"
               }`}
             >
               {item}
@@ -200,10 +200,10 @@ export default function KnowledgePage() {
             return (
               <article
                 key={resource.id}
-                className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition hover:border-cyan-400/40"
+                className="flex flex-col rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition hover:border-teal-400/40"
               >
                 <div className="flex items-center justify-between">
-                  <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs text-cyan-300">
+                  <span className="rounded-full bg-teal-400/10 px-3 py-1 text-xs text-teal-300">
                     {resource.type}
                   </span>
 
@@ -225,7 +225,7 @@ export default function KnowledgePage() {
                     CATEGORY
                   </p>
 
-                  <p className="mt-1 text-sm text-cyan-300">
+                  <p className="mt-1 text-sm text-teal-300">
                     {resource.category}
                   </p>
 
@@ -239,8 +239,8 @@ export default function KnowledgePage() {
                   onClick={() => toggleSave(resource.id)}
                   className={`mt-5 w-full rounded-xl border px-4 py-3 text-sm font-medium transition ${
                     isSaved
-                      ? "border-cyan-400/30 bg-cyan-400/10 text-cyan-300"
-                      : "border-white/10 bg-white/[0.04] text-gray-300 hover:border-cyan-400/40"
+                      ? "border-teal-400/30 bg-teal-400/10 text-teal-300"
+                      : "border-white/10 bg-white/[0.04] text-gray-300 hover:border-teal-400/40"
                   }`}
                 >
                   {isSaved ? "Saved ✓" : "Save Resource +"}

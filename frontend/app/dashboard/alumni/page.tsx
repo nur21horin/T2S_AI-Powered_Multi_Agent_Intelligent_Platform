@@ -11,7 +11,7 @@ export default function AlumniDashboard() {
   return (
     <div className="space-y-8">
       <section>
-        <p className="text-sm font-medium text-cyan-300">
+        <p className="text-sm font-medium text-teal-300">
           ALUMNI WORKSPACE
         </p>
         <h1 className="mt-2 text-3xl font-bold">Welcome to your alumni hub</h1>
@@ -37,14 +37,14 @@ export default function AlumniDashboard() {
         <h2 className="text-xl font-semibold">Ways to get involved</h2>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-white/5 bg-[#0c1120] p-5">
+          <div className="rounded-xl border border-white/5 bg-[#073b36] p-5">
             <h3 className="font-semibold">Mentor students</h3>
             <p className="mt-2 text-sm text-gray-400">
               Share practical advice and help students develop their skills.
             </p>
           </div>
 
-          <div className="rounded-xl border border-white/5 bg-[#0c1120] p-5">
+          <div className="rounded-xl border border-white/5 bg-[#073b36] p-5">
             <h3 className="font-semibold">Share opportunities</h3>
             <p className="mt-2 text-sm text-gray-400">
               Help students discover internships, projects, and career paths.
@@ -55,7 +55,7 @@ export default function AlumniDashboard() {
 
       <Link
         href="/dashboard/career"
-        className="block rounded-2xl border border-white/10 p-5 transition hover:border-cyan-400/50"
+        className="block rounded-2xl border border-white/10 p-5 transition hover:border-teal-400/50"
       >
         <h2 className="font-semibold">Career Hub →</h2>
         <p className="mt-2 text-sm text-gray-400">

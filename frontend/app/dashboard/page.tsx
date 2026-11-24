@@ -28,7 +28,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <section>
-        <p className="text-sm font-medium text-violet-300">
+        <p className="text-sm font-medium text-emerald-300">
           YOUR T2S WORKSPACE
         </p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">
@@ -48,7 +48,7 @@ export default function DashboardPage() {
           >
             <p className="text-sm text-gray-400">{stat.label}</p>
             <p className="mt-4 text-3xl font-bold">{stat.value}</p>
-            <p className="mt-2 text-xs text-violet-300">{stat.note}</p>
+            <p className="mt-2 text-xs text-emerald-300">{stat.note}</p>
           </div>
         ))}
       </section>
@@ -62,7 +62,7 @@ export default function DashboardPage() {
                 Start exploring the T2S platform.
               </p>
             </div>
-            <span className="rounded-full bg-violet-400/10 px-3 py-1 text-xs text-violet-300">
+            <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">
               Getting started
             </span>
           </div>
@@ -71,9 +71,9 @@ export default function DashboardPage() {
             {activities.map((activity, index) => (
               <div
                 key={activity.title}
-                className="flex items-center gap-4 rounded-xl border border-white/5 bg-[#0c1120] p-4"
+                className="flex items-center gap-4 rounded-xl border border-white/5 bg-[#073b36] p-4"
               >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-400/10 text-sm font-semibold text-violet-300">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-400/10 text-sm font-semibold text-emerald-300">
                   0{index + 1}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -90,8 +90,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-violet-400/20 bg-gradient-to-br from-violet-500/15 to-cyan-500/5 p-6">
-          <p className="text-sm font-medium text-violet-300">
+        <div className="rounded-2xl border border-emerald-400/20 bg-gradient-to-br from-emerald-500/15 to-teal-500/5 p-6">
+          <p className="text-sm font-medium text-emerald-300">
             TALENT TO SKILL
           </p>
           <h2 className="mt-3 text-2xl font-bold">

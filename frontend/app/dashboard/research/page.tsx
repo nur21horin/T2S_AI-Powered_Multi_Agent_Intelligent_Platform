@@ -104,7 +104,7 @@ export default function ResearchPage() {
     <div className="space-y-8">
       {/* Page heading */}
       <section>
-        <p className="text-sm font-medium text-cyan-300">
+        <p className="text-sm font-medium text-teal-300">
           RESEARCH AND INNOVATION
         </p>
 
@@ -147,7 +147,7 @@ export default function ResearchPage() {
             onClick={() => setActiveTab(tab)}
             className={`rounded-xl px-4 py-2 text-sm transition ${
               activeTab === tab
-                ? "bg-violet-500 text-white"
+                ? "bg-emerald-500 text-white"
                 : "border border-white/10 text-gray-400 hover:text-white"
             }`}
           >
@@ -175,10 +175,10 @@ export default function ResearchPage() {
               return (
                 <article
                   key={project.id}
-                  className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition hover:border-violet-400/40"
+                  className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition hover:border-emerald-400/40"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="rounded-full bg-violet-400/10 px-3 py-1 text-xs text-violet-300">
+                    <span className="rounded-full bg-emerald-400/10 px-3 py-1 text-xs text-emerald-300">
                       {project.field}
                     </span>
 
@@ -205,8 +205,8 @@ export default function ResearchPage() {
                     onClick={() => toggleProject(project.id)}
                     className={`mt-5 w-full rounded-xl px-4 py-3 text-sm font-medium transition ${
                       isJoined
-                        ? "border border-cyan-400/30 bg-cyan-400/10 text-cyan-300"
-                        : "bg-violet-500 text-white hover:bg-violet-600"
+                        ? "border border-teal-400/30 bg-teal-400/10 text-teal-300"
+                        : "bg-emerald-500 text-white hover:bg-emerald-600"
                     }`}
                   >
                     {isJoined ? "Interest Submitted ✓" : "Express Interest"}
@@ -234,7 +234,7 @@ export default function ResearchPage() {
               className="rounded-2xl border border-white/10 bg-white/[0.035] p-5"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-xs text-cyan-300">
+                <span className="rounded-full bg-teal-400/10 px-3 py-1 text-xs text-teal-300">
                   {paper.type}
                 </span>
                 <span className="text-xs text-gray-500">{paper.year}</span>
@@ -267,8 +267,8 @@ export default function ResearchPage() {
                   onClick={() => toggleInterest(interest)}
                   className={`rounded-xl border px-4 py-3 text-sm transition ${
                     selected
-                      ? "border-violet-400/50 bg-violet-400/10 text-violet-300"
-                      : "border-white/10 bg-[#0c1120] text-gray-400 hover:text-white"
+                      ? "border-emerald-400/50 bg-emerald-400/10 text-emerald-300"
+                      : "border-white/10 bg-[#073b36] text-gray-400 hover:text-white"
                   }`}
                 >
                   {selected ? "✓ " : "+ "}

@@ -9,7 +9,7 @@ export default function TasksPage() {
   return (
     <div className="space-y-8">
       <div>
-        <p className="text-sm text-cyan-300">LEARNING MANAGEMENT</p>
+        <p className="text-sm text-teal-300">LEARNING MANAGEMENT</p>
         <h1 className="mt-2 text-3xl font-bold">Tasks & Assignments</h1>
         <p className="mt-2 text-gray-400">
           Manage your assignments and track your learning progress.
@@ -49,14 +49,14 @@ export default function TasksPage() {
             <select
               value={status}
               onChange={(event) => setStatus(event.target.value)}
-              className="mt-4 rounded-lg border border-white/10 bg-[#0c1120] px-4 py-2 text-white"
+              className="mt-4 rounded-lg border border-white/10 bg-[#073b36] px-4 py-2 text-white"
             >
               <option>Pending</option>
               <option>In Progress</option>
               <option>Completed</option>
             </select>
 
-            <p className="mt-3 text-sm text-cyan-300">
+            <p className="mt-3 text-sm text-teal-300">
               Current status: {status}
             </p>
           </div>

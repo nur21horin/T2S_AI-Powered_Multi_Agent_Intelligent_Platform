@@ -3,6 +3,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { ThemeToggle } from "../../components/ThemeProvider";
+import FeatureScene from "../../components/FeatureScene";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -15,18 +17,19 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#080b14] px-5 py-12 text-white">
+    <main className="page-enter flex min-h-screen items-center justify-center bg-[#052f2c] px-5 py-12 text-white">
       <div className="w-full max-w-md">
-        <Link href="/" className="text-xl font-bold">
-          <span className="text-violet-400">T2S</span> Platform
-        </Link>
+        <div className="flex items-center justify-between"><Link href="/" className="text-xl font-bold">
+          <span className="text-emerald-400">T2S</span> Platform
+        </Link><ThemeToggle /></div>
 
         <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.04] p-8 shadow-2xl">
-          <p className="text-sm font-medium text-violet-300">WELCOME BACK</p>
+          <p className="text-sm font-medium text-emerald-300">WELCOME BACK</p>
           <h1 className="mt-2 text-3xl font-bold">Log in to T2S</h1>
           <p className="mt-3 text-sm text-gray-400">
             Continue your journey from talent to skill.
           </p>
+          <FeatureScene scene="student" className="auth-feature-scene mt-6" />
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <div>
@@ -41,7 +44,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@university.edu"
-                className="w-full rounded-xl border border-white/10 bg-[#0c1120] px-4 py-3 outline-none focus:border-violet-400"
+                className="w-full rounded-xl border border-white/10 bg-[#073b36] px-4 py-3 outline-none focus:border-emerald-400"
               />
             </div>
 
@@ -57,19 +60,19 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
-                className="w-full rounded-xl border border-white/10 bg-[#0c1120] px-4 py-3 outline-none focus:border-violet-400"
+                className="w-full rounded-xl border border-white/10 bg-[#073b36] px-4 py-3 outline-none focus:border-emerald-400"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full rounded-xl bg-violet-500 px-4 py-3 font-semibold transition hover:bg-violet-400"
+              className="w-full rounded-xl bg-emerald-500 px-4 py-3 font-semibold transition hover:bg-emerald-400"
             >
               Log in
             </button>
 
             {message && (
-              <p role="status" className="text-sm text-cyan-300">
+              <p role="status" className="text-sm text-teal-300">
                 {message}
               </p>
             )}
@@ -79,7 +82,7 @@ export default function LoginPage() {
             New to T2S?{" "}
             <Link
               href="/register"
-              className="font-semibold text-violet-300 hover:text-violet-200"
+              className="font-semibold text-emerald-300 hover:text-emerald-200"
             >
               Create an account
             </Link>
