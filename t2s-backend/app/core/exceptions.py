@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.logging import request_id_ctx
+from app.core.constants import SECURITY_RESPONSE_HEADERS
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +18,15 @@ class AppException(Exception):
     code = "internal_error"
     message = "An unexpected error occurred."
 
-    def __init__(self, message: str | None = None, details: Any = None) -> None:
+    def __init__(
+        self,
+        message: str | None = None,
+        details: Any = None,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         self.message = message or self.message
         self.details = details
+        self.headers = dict(headers) if headers is not None else None
         super().__init__(self.message)
 
 
@@ -55,11 +62,15 @@ def _error_response(status: int, code: str, message: str, details: Any = None,
                     headers: dict[str, str] | None = None) -> JSONResponse:
     body = {"error": {"code": code, "message": message, "details": details,
                       "request_id": request_id_ctx.get()}}
-    return JSONResponse(status_code=status, content=body, headers=headers)
+    response_headers = dict(SECURITY_RESPONSE_HEADERS)
+    response_headers.update(headers or {})
+    return JSONResponse(status_code=status, content=body, headers=response_headers)
 
 
 async def _app_exception_handler(_: Request, exc: AppException) -> JSONResponse:
-    return _error_response(exc.status_code, exc.code, exc.message, exc.details)
+    return _error_response(
+        exc.status_code, exc.code, exc.message, exc.details, headers=exc.headers
+    )
 
 
 async def _http_exception_handler(_: Request, exc: StarletteHTTPException) -> JSONResponse:
