@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
-from sqlalchemy import ForeignKey, String, Text, Uuid
+from sqlalchemy import Boolean, ForeignKey, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -21,6 +21,7 @@ class StudentProfile(TimestampMixin, Base):
     technical_background: Mapped[str | None] = mapped_column(Text)
     bio: Mapped[str | None] = mapped_column(Text)
     learning_goals: Mapped[str | None] = mapped_column(Text)
+    skills_discoverable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     user: Mapped["User"] = relationship("User", back_populates="student_profile")
 
 
