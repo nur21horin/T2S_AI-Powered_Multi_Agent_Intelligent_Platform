@@ -12,6 +12,7 @@ from app.security.revocation import get_redis_client, is_access_token_revoked
 from app.security.tokens import InvalidAccessToken, decode_access_token
 from app.services.auth_service import AuthService
 from app.services.email_service import EmailSender
+from app.services.ai_tools_service import AIToolsService
 
 _bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -73,3 +74,11 @@ def get_current_user(
     if revoked:
         raise UnauthorizedError("Authentication required.")
     return user
+
+
+def get_ai_tools_service(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> AIToolsService:
+    """Bind read-only AI tools to the authenticated request identity and DB session."""
+    return AIToolsService(db, user)
