@@ -194,7 +194,7 @@ def test_auth_migration_upgrade_and_downgrade_on_isolated_test_schema(
                 )
                 command.upgrade(config, "head")
                 assert MigrationContext.configure(connection).get_current_revision() == (
-                    "f7c4d5e6f7a8"
+                    "l3m4n5o6p7q"
                 )
                 assert {
                     "users", "auth_tokens", "student_profiles", "teacher_profiles",
@@ -213,6 +213,27 @@ def test_auth_migration_upgrade_and_downgrade_on_isolated_test_schema(
                     {"id": existing_user_id},
                 ).scalar_one()
                 assert existing == 0
+                student_profile_id = uuid.uuid4()
+                connection.execute(
+                    text(
+                        "INSERT INTO student_profiles (id, user_id) VALUES (:id, :user_id)"
+                    ),
+                    {"id": student_profile_id, "user_id": existing_user_id},
+                )
+                assert connection.execute(
+                    text("SELECT skills_discoverable FROM student_profiles WHERE id = :id"),
+                    {"id": student_profile_id},
+                ).scalar_one() is False
+                command.downgrade(config, "k2l3m4n5o6p")
+                assert MigrationContext.configure(connection).get_current_revision() == "k2l3m4n5o6p"
+                assert "skills_discoverable" not in {
+                    column["name"] for column in inspect(connection).get_columns("student_profiles")
+                }
+                command.upgrade(config, "head")
+                assert connection.execute(
+                    text("SELECT skills_discoverable FROM student_profiles WHERE id = :id"),
+                    {"id": student_profile_id},
+                ).scalar_one() is False
                 assert connection.execute(
                     text("SELECT id FROM auth_tokens WHERE id = :id"),
                     {"id": existing_token_id},

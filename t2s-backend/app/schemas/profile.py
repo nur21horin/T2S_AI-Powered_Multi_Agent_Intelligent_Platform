@@ -12,6 +12,7 @@ class ProfileUpdate(BaseModel):
     technical_background: str | None = Field(default=None, max_length=5000)
     bio: str | None = Field(default=None, max_length=5000)
     learning_goals: str | None = Field(default=None, max_length=5000)
+    skills_discoverable: bool | None = None
     designation: str | None = Field(default=None, max_length=120)
     introduction: str | None = Field(default=None, max_length=5000)
     areas_of_expertise: str | None = Field(default=None, max_length=5000)

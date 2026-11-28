@@ -1,9 +1,15 @@
-from fastapi import FastAPI,HTTPException
+import sys
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 load_dotenv()
 from AI.agents.profile_skill_agent import ProfileSkillAgent
